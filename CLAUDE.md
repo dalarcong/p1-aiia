@@ -10,9 +10,18 @@ se cuenta el número de **personas** por frame y se compara **dónde se ejecuta 
 local vs. VM en Azure (IaaS) vs. Azure Functions (serverless). El entregable final es una
 memoria en PDF con pasos, problemas, decisiones de diseño, capturas y conclusiones comparativas.
 
-El enunciado completo está en `docs/enunciado.pdf`. Los scripts de ejemplo del profesorado
-(captura de frames, envío a la VM, envío a Blob Storage) están en `docs/ejemplos/`:
-**partir siempre de ellos** cuando el enunciado lo indique.
+El enunciado completo está en `docs/Practice1.pdf`. Los ejemplos del profesorado están en
+`docs/ejemplo/`: `grabber.py` (captura MJPEG + YOLOv8 + CSV) y la web `index.html` / `script.js`
+(gráfica Chart.js a partir de `database.csv` y `processed_frame.jpg`).
+La documentación de Azure del profesorado está en `docs/azure/`:
+
+- `Azure documentation 1.pdf`: Function App (plan de consumo, límite 1,5 GB RAM) y web estática
+  en Storage Account (`$web`) → tareas 3.1 y 3.3.
+- `Azure documentation 2.pdf`: recurso Azure AI services (S0) y snippet con
+  `azure-ai-vision-imageanalysis` (`VisualFeatures.PEOPLE`) → tareas 3.4 y 3.5. Su último snippet
+  (`VisionSource`) es del SDK antiguo: con el nuevo, `client.analyze(image_data=bytes)` no necesita `/tmp`.
+
+**Partir siempre de ellos** cuando el enunciado lo indique.
 
 ## Partes y tareas
 
@@ -51,7 +60,7 @@ El enunciado completo está en `docs/enunciado.pdf`. Los scripts de ejemplo del 
 ## Estructura del repo
 
 ```
-common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, capturas/, enunciado.pdf, ejemplos/)
+common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, screenshots/, Practice1.pdf, ejemplo/, azure/)
 .env.example  .gitignore  README.md
 ```
 
@@ -60,7 +69,8 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, capt
 - **Nunca** subir secretos: `.env`, `local.settings.json`, connection strings y claves.
   Tampoco pesos del modelo (`*.pt`), frames en bruto ni `venv/`.
 - Toda la configuración (URLs de cámaras, intervalos, IP de la VM, nombres de contenedores) va en `.env` o en config.
-- Ramas `feat/<tarea>`, PRs pequeños y commits con número de tarea (p. ej. `2.3: YOLO en la VM guarda CSV`).
+- Una rama por parte (`feat/local`, `feat/vm`, `feat/serverless`, `feat/multicam`, `feat/avanzado`)
+  y commits con número de tarea (p. ej. `2.3: YOLO en la VM guarda CSV`).
 - Un `requirements.txt` por componente.
 - `vm/setup_vm.sh` reproduce la VM completa: swap de 2 GB, torch **CPU-only**
   (`--index-url https://download.pytorch.org/whl/cpu`) y dependencias.
@@ -86,11 +96,4 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, capt
 
 - Preferencia por escenas tranquilas: 2–10 personas por frame, bien separadas, con las personas
   ocupando al menos un 5–10 % del alto de la imagen.
-- Candidatas:
-  - Jackson Hole Town Square (directo en YouTube; cubre tardes y noches en España).
-  - Park City y Breckenridge (Main Street).
-  - Zermatt y Cortina d'Ampezzo.
-  - Salamanca (Plaza Mayor) y Santiago de Compostela (Obradoiro).
-- Captura preferente desde directos de YouTube con `yt-dlp`/`streamlink` + OpenCV.
-- Opcional: recortar una ROI que simule la zona de control de una farola.
-- No usar Insecam (cámaras privadas mal protegidas).
+- Fuentes sugeridas por el enunciado: EarthCam, SkylineWebcams y WebcamTaxi.
