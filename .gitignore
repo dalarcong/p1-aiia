@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project
+*.pt
+runs/
+frames/
+local.settings.json
+prueba.jpg
