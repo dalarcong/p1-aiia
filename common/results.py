@@ -1,5 +1,5 @@
 """
-Shared CSV persistance for architecture comparison results.
+CSV persistance for results.
 """
 from __future__ import annotations
 
@@ -8,22 +8,14 @@ from pathlib import Path
 
 CSV_FIELDS = [
     "timestamp",
-    "camera_id",
-    "architecture",
     "n_people",
-    "latency_ms",
-    "size_bytes",
 ]
 
 def append_result(
     csv_path: str | Path,
     *,
     timestamp: str,
-    camera_id: str,
-    architecture: str,
     n_people: int,
-    latency_ms: float,
-    size_bytes: int,
 ) -> None:
     """
     Append one observation to the CSV, creating its header if needed.
@@ -39,10 +31,6 @@ def append_result(
         writer.writerow(
             {
                 "timestamp": timestamp,
-                "camera_id": camera_id,
-                "architecture": architecture,
                 "n_people": n_people,
-                "latency_ms": f"{latency_ms:.2f}",
-                "size_bytes": size_bytes,
             }
         )

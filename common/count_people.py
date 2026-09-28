@@ -4,25 +4,15 @@ Person detection with YOLOv8 (task 1.3)
 from __future__ import annotations
 
 import os
-from typing import TypedDict
 
-import cv2
-import numpy as np
 from ultralytics import YOLO
+from common.image import decode_jpeg
+from common.types import BoundingBox
 
 PERSON_CLASS_ID = 0  # COCO (Common Objects in Context) class id for "person"
 
-class BoundingBox(TypedDict):
-    """JSON-serialisable detection box."""
-
-    x1: int
-    x2: int
-    y1: int
-    y2: int
-    confidence: float
-
 class DetectionError(Exception):
-    """Raised when an image cannot be decoded or processed by YOLO."""
+    """Raised when YOLO configuration, loading or inference fails."""
 
 _model: YOLO | None = None
 
@@ -34,27 +24,32 @@ def load_model() -> YOLO:
     The model selected is the YOLOv8 nano model (6MB).
     """
     global _model
+
     if _model is None:
         model_name = os.getenv("YOLO_MODEL", "yolov8n.pt")
-        _model = YOLO(model_name)
+
+        try:
+            _model = YOLO(model_name)
+        except Exception as exc:
+            raise DetectionError(
+                f"Could not load YOLO model {model_name!r}: {exc}"
+            ) from exc
+        
     return _model
 
-def _decode_jpeg(img: bytes) -> np.ndarray:
-    """
-    Decode JPEG byes into a OpenCV BRG image
-    """
-    array = np.frombuffer(img, dtype=np.uint8)
-    frame = cv2.imdecode(array, cv2.IMREAD_COLOR)
-    if frame is None:
-        raise DetectionError("The JPEG image could not be decoded")
-    return frame
 
 def _get_prediction_settings() -> tuple[float, int, str]:
     """
     Read and validate inference settings from environment variables.
     """
-    confidence = float(os.getenv("YOLO_CONF", "0.5"))
-    image_size = int(os.getenv("YOLO_IMGSZ", "640"))
+    try:
+        confidence = float(os.getenv("YOLO_CONF", "0.5"))
+        image_size = int(os.getenv("YOLO_IMGSZ", "640"))
+    except ValueError as exc:
+        raise DetectionError(
+            "YOLO_CONF and YOLO_IMGSZ must be numeric"
+        ) from exc
+
     device = os.getenv("YOLO_DEVICE", "cpu")
 
     if not 0.0 <= confidence <= 1.0:
@@ -64,7 +59,9 @@ def _get_prediction_settings() -> tuple[float, int, str]:
 
     return confidence, image_size, device
 
-def count_people(img: bytes):
+def count_people(
+        img: bytes
+) -> tuple[int, list[BoundingBox]]:
     """
     Count people in a JPEG image using YOLOv8
 
@@ -80,7 +77,8 @@ def count_people(img: bytes):
         DetectionError: If the JPEG is invalid, configuration is invalid or
         YOLO inference fails.
     """
-    frame = _decode_jpeg(img)
+
+    frame = decode_jpeg(img)
     confidence, image_size, device = _get_prediction_settings()
 
     try:
@@ -92,10 +90,13 @@ def count_people(img: bytes):
             device=device,
             verbose=False,
         )[0]
+    except DetectionError:
+        raise
     except Exception as exc:
         raise DetectionError(f"YOLO inference failed: {exc}") from exc
 
     boxes: list[BoundingBox] = []
+
     if result.boxes is None:
         return 0, boxes
 
@@ -113,4 +114,4 @@ def count_people(img: bytes):
             }
         )
 
-    return(len(boxes), boxes)
+    return len(boxes), boxes

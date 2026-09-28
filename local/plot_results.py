@@ -1,34 +1,98 @@
 """
-Plot counts over time from the CSV (task 1.3).
+Plot person counts over time for one local execution.
+
+By default, the most recent execution in results/local/ is used.
+
+Run from the project root:
+    python -m local.plot_results
+
+Or select one execution explicitly:
+    python -m local.plot_results \
+        --run-dir results/local/<execution>
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import os
 from datetime import datetime
 from pathlib import Path
 
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from dotenv import load_dotenv
+
+DEFAULT_RESULTS_ROOT = Path("results/local")
 
 
 def _arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Plot person count over time")
-    parser.add_argument("--csv", default="results/detections.csv", help="Input CSV path")
-    parser.add_argument(
-        "--output",
-        default="results/local_people_timeline.png",
-        help="Output PNG path"
+    parser = argparse.ArgumentParser(
+        description="Plot person count over time"
     )
-    parser.add_argument("--camera-id", default=None, help="Optional camera_id filter")
+
+    parser.add_argument(
+        "--run-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Execution directory. "
+            "If omitted, the latest execution is used."
+        ),
+    )
+
     return parser.parse_args()
+
+
+def _latest_run(
+    results_root: Path,
+) -> Path:
+    """Return the newest execution containing a detections.csv file."""
+    if not results_root.exists():
+        raise SystemExit(
+            f"Results directory not found: {results_root}"
+        )
+
+    runs = [
+        path
+        for path in results_root.iterdir()
+        if (
+            path.is_dir()
+            and (path / "detections.csv").is_file()
+        )
+    ]
+
+    if not runs:
+        raise SystemExit(
+            f"No executions containing detections.csv found "
+            f"in {results_root}"
+        )
+
+    return max(
+        runs,
+        key=lambda path: path.name,
+    )
 
 
 def main() -> None:
     args = _arguments()
-    csv_path = Path(args.csv)
-    output_path = Path(args.output)
+
+    load_dotenv()
+
+    results_root = Path(
+        os.getenv(
+            "RESULTS_ROOT",
+            str(DEFAULT_RESULTS_ROOT),
+        )
+    )
+
+    run_dir = (
+        args.run_dir
+        if args.run_dir is not None
+        else _latest_run(results_root)
+    )
+    csv_path = run_dir / "detections.csv"
+    output_path = run_dir / "people_timeline.png"
 
     timestamps: list[datetime] = []
     counts: list[int] = []
@@ -38,11 +102,6 @@ def main() -> None:
 
     with csv_path.open(newline="", encoding="utf-8") as handle:
         for row in csv.DictReader(handle):
-            if row.get("architecture") != "local":
-                continue
-            if args.camera_id is not None and row.get("camera_id") != args.camera_id:
-                continue
-
             timestamp = datetime.fromisoformat(row["timestamp"])
             # Display in the machine's local timezone while preserving UTC in CSV
             if timestamp.tzinfo is not None:
@@ -62,7 +121,7 @@ def main() -> None:
     ax.set_ylabel("Number of people")
     ax.set_ylim(bottom=0)
     ax.yaxis.set_major_locator(MaxNLocator(integer=True))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S - %d/%m/%y"))
     ax.grid(True, alpha=0.25)
     fig.autofmt_xdate()
     fig.tight_layout()

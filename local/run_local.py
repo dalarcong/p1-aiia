@@ -1,140 +1,183 @@
 """
-Task 1 full pipeline
+Launch the complete local pipeline.
 
-Captures one frame at the configured interval, counts people with YOLOv8,
-logs the common metrics CSV and writes the latest annotated frame.
+Two independent processes are started:
+
+    Task 1.2:
+        local.capture_loop
+        Webcam -> frames/
+
+    Task 1.3:
+        local.detection_loop
+        frames/ -> YOLO -> results/
+
+capture_loop.py remains unchanged.
 
 Run from the project root:
     python -m local.run_local
 
-For a short smoke test:
+Short test:
     python -m local.run_local --max-frames 3
 """
 from __future__ import annotations
 
 import argparse
 import os
+import subprocess
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from common.annotate import annotate_people
-from common.capture import CaptureError, capture_frame, resolve_stream_url
-from common.count_people import DetectionError, count_people, load_model
-from common.results import append_result
 
-ARCHITERCTURE = "local"
+DEFAULT_RESULTS_ROOT = Path("results/local")
+
 
 def _arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run local YOLOv8 person counting")
+    parser = argparse.ArgumentParser(
+        description="Run local capture and YOLO person detection"
+    )
+
     parser.add_argument(
         "--max-frames",
         type=int,
         default=None,
-        help="Stop after N successfully processed frames"
+        help="Stop after the detector has processed N frames",
     )
+
     return parser.parse_args()
 
 
-def _atomic_write(path: Path, data: bytes) -> None:
-    """
-    Replace a generated file atomically so readers never see a partial JPEG.
-    """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(data)
-    temporary.replace(path)
+def _create_run_directory(
+    results_root: Path,
+) -> Path:
+    """Create an independent directory for this execution."""
+    run_id = datetime.now().strftime(
+        "%Y%m%d_%H%M%S_%f"
+    )
+
+    run_dir = results_root / run_id
+
+    run_dir.mkdir(
+        parents=True,
+        exist_ok=False,
+    )
+
+    (run_dir / "annotated").mkdir()
+
+    return run_dir
+
+
+def _stop_process(
+    process: subprocess.Popen,
+) -> None:
+    """Stop a child process if it is still running."""
+    if process.poll() is not None:
+        return
+
+    process.terminate()
+
+    try:
+        process.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
 
 
 def main() -> None:
     args = _arguments()
+
     load_dotenv()
 
-    camera_url = os.getenv("CAMERA_URL")
-    if not camera_url:
-        raise SystemExit("CAMERA_URL is not configured in .env")
-
-    camera_id = os.getenv("CAMERA_ID", "camera-1")
-    interval = float(os.getenv("CAPTURE_INTERVAL", "5"))
-    results_csv = Path(os.getenv("RESULTS_CSV", "results/detections.csv"))
-    annotated_frame = Path(
-        os.getenv("ANNOTATED_FRAME", "results/processed_frame_local.jpg")
-    )
-
-    if interval <= 0:
-        raise SystemExit("CAPTURE_INTERVAL must be positive")
     if args.max_frames is not None and args.max_frames <= 0:
         raise SystemExit("--max-frames must be positive")
 
-    print("Loading YOLOv8 model...")
-    load_model()
-    print(f"Camera={camera_id} | interval={interval}s | CSV={results_csv}")
+    results_root = Path(
+        os.getenv(
+            "RESULTS_ROOT",
+            str(DEFAULT_RESULTS_ROOT),
+        )
+    )
 
-    stream_url: str | None = None
-    processed = 0
+    run_dir = _create_run_directory(
+        results_root
+    )
+
+    # Any frame written after this instant can belong to this execution.
+    start_time = time.time()
+
+    detection_command = [
+        sys.executable,
+        "-m",
+        "local.detection_loop",
+        "--run-dir",
+        str(run_dir),
+        "--start-time",
+        str(start_time),
+    ]
+
+    if args.max_frames is not None:
+        detection_command += [
+            "--max-frames",
+            str(args.max_frames),
+        ]
+
+    capture_command = [
+        sys.executable,
+        "-m",
+        "local.capture_loop",
+    ]
+
+    print(f"Execution directory: {run_dir}")
+
+    print("Starting detection process (task 1.3)...")
+    detection_process = subprocess.Popen(
+        detection_command
+    )
+
+    print("Starting capture process (task 1.2)...")
+    capture_process = subprocess.Popen(
+        capture_command
+    )
 
     try:
-        while args.max_frames is None or processed < args.max_frames:
-            cycle_start = time.monotonic()
+        while True:
+            capture_status = capture_process.poll()
+            detection_status = detection_process.poll()
 
-            try:
-                if stream_url is None:
-                    stream_url = resolve_stream_url(camera_url)
-                    print("[INFO] Stream URL resolved")
+            # During a short test, detection_loop exits normally after
+            # processing --max-frames. capture_loop is then stopped here.
+            if (
+                args.max_frames is not None
+                and detection_status == 0
+            ):
+                break
 
-                jpeg = capture_frame(stream_url)
-                timestamp = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+            # Any unexpected child-process termination stops the pipeline.
+            if (
+                capture_status is not None
+                or detection_status is not None
+            ):
+                break
 
-                """
-                For later architecture comparisons latency starts when the frame
-                is already available to the processing architecture. Capture time
-                is therefore excluded from this metric
-                """
-                inference_start = time.monotonic()
-                n_people, boxes = count_people(jpeg)
-                latency_ms = (time.monotonic() - inference_start) * 1000.0
-
-                append_result(
-                    results_csv,
-                    timestamp=timestamp,
-                    camera_id=camera_id,
-                    architecture=ARCHITERCTURE,
-                    n_people=n_people,
-                    latency_ms=latency_ms,
-                    size_bytes=len(jpeg)
-                )
-
-                annotated = annotate_people(jpeg, boxes)
-                _atomic_write(annotated_frame, annotated)
-
-                processed += 1
-                total_s = time.monotonic() - cycle_start
-
-                print(
-                    f"[{timestamp}] people={n_people}"
-                    f"latency={latency_ms:.0f} ms size={len(jpeg) / 1024:.0f} KB"
-                    f"cycle={total_s:.2f} s"
-                )
-
-            except CaptureError as exc:
-                print(f"[CAPTURE ERROR] {exc}")
-                # Skyline tokens expire. Force re-resolution on the next cycle.
-                stream_url = None
-            except DetectionError as exc:
-                print(f"[DETECTION ERROR] {exc}")
-
-            elapsed = time.monotonic() - cycle_start
-            if elapsed > interval:
-                print(
-                    f"[WARN] Processing took {elapsed:.2f}s, longer than the "
-                    f"configured {interval:.2f}s interval"
-                )
-            time.sleep(max(0.0, interval - elapsed))
+            time.sleep(0.2)
 
     except KeyboardInterrupt:
-        print("\nStopped")
+        print("\nStopping local execution...")
+
+    finally:
+        _stop_process(capture_process)
+        _stop_process(detection_process)
+
+    print(f"Results saved in: {run_dir}")
+    print("Original frames remain in: frames/")
+    print("Generate the graph with:")
+    print(
+        f"  python -m local.plot_results "
+        f"--run-dir {run_dir}"
+    )
 
 
 if __name__ == "__main__":
