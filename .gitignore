@@ -223,3 +223,6 @@ runs/
 frames/
 local.settings.json
 prueba.jpg
+results/detections.csv
+results/local_people_timeline.png
+/results

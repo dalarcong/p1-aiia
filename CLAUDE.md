@@ -49,7 +49,7 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 - **Avanzado (+2)**
   - Contar personas únicas mediante tracking (`model.track()`).
   - Contar también vehículos.
-  - Optimizaciones: resolución mínima, compresión, detección de movimiento en local.
+  - Optimizaciones: resolución mínima, compresión, detección de movimiento en local, etc.
 
 ## Interfaces comunes (no cambiar sin acordarlo)
 

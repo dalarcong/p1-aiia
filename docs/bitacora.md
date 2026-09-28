@@ -23,3 +23,9 @@
 - **Bucle de captura** (`local/capture_loop.py`): 1 frame cada 5s, guardado en `frames/`. Duerme el tiempo restante, para que el periodo sea de 5s aunque la captura tarde. Si falla, registra el error, renueva el token y sigue.
 
 - **Problema:** Con `python local/capture_loop.py` no se encuentra `common`. Se lanza como módulo desde la raíz: `python -m local.capture_loop`.
+
+## 28/09/2026 - 1.3. Detección de personas y gráfica de cantidad a lo largo del tiempo
+
+- Creados archivos `common/annotate.py`, `common/count_people.py` `common/results.py`, `local/run_local.py` y `plot_results`. Además, se han añadido nuevas variables al .env.example
+
+- **Detección de personas**: Implementada función `count_people(bytes)` en  `common/count_people.py`
