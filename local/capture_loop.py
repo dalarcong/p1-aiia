@@ -37,8 +37,14 @@ def main() -> None:
                 if stream_url is None:
                     stream_url = resolve_stream_url(camera_url)
                     print(f"[{now:%H:%M:%S}] [INFO] Stream URL resolved")
-
-                jpeg = capture_frame(stream_url)
+                try:
+                    jpeg = capture_frame(stream_url)
+                except CaptureError:
+                    # The stream token may have expired: renew it and retry once
+                    stream_url = resolve_stream_url(camera_url)
+                    print(f"[{now:%H:%M:%S}] [INFO] Stream URL renewed")
+                    jpeg = capture_frame(stream_url)
+                
                 path = FRAMES_DIR / f"{now:%Y%m%d_%H%M%S}.jpg"
                 path.write_bytes(jpeg)
 

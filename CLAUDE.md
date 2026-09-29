@@ -55,7 +55,8 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 
 - `capture_frame(url) -> bytes (JPEG)` en `common/capture.py`.
 - `count_people(img) -> (n, boxes)` en `common/count_people.py`.
-- CSV común: `timestamp, camera_id, arquitectura, n_personas, latencia_ms, tamaño_bytes`.
+- CSV de resultados (`common/results.py`): de momento `timestamp, n_people` (Parte 1). Las
+  columnas para comparar arquitecturas (latencia, tamaño del frame, etc.) se acordarán en la Parte 2.
 
 ## Estructura del repo
 
