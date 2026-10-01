@@ -216,3 +216,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Project
+*.pt
+runs/
+frames/
+local.settings.json
+prueba.jpg
+results/detections.csv
+results/local_people_timeline.png
+/results
+/calibration/ground_truth_overlay
+/calibration/*.png
