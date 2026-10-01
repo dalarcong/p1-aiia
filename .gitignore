@@ -226,3 +226,5 @@ prueba.jpg
 results/detections.csv
 results/local_people_timeline.png
 /results
+/calibration/ground_truth_overlay
+/calibration/*.png

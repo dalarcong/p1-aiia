@@ -24,7 +24,6 @@
 
 - **Problema:** Con `python local/capture_loop.py` no se encuentra `common`. Se lanza como módulo desde la raíz: `python -m local.capture_loop`.
 
-
 ## 28/09/2026 - 1.3 Detección local de personas con YOLOv8 + gráfica básica
 
 - Se implementó la interfaz `count_people(img) -> (n, boxes)` en
@@ -41,7 +40,7 @@
 - La inferencia se limita a la clase COCO `person` (`class_id = 0`).
   El umbral de confianza y el tamaño de entrada de YOLO permanecen
   configurables mediante `YOLO_CONF` y `YOLO_IMGSZ`. Del mismo modo que
-  con el modelo, también es necesario probar estos valores para hallar 
+  con el modelo, también es necesario probar estos valores para hallar
   el más adecuado a la escena escogida.
 
 - Se separaron las operaciones comunes de imagen en `common/image.py`.
@@ -110,15 +109,28 @@
   `capture_loop.py` (`YYYYMMDD_HHMMSS.jpg`), ya que representa el instante
   de captura.
 
-### Ejecución 
+### Ejecución
+
 Para pruebas límitado a cierto número de frames:
-```python -m local.run_local --max-frames 3```
+`python -m local.run_local --max-frames 3`
 
 De forma continua:
-```python -m local.run_local```
+`python -m local.run_local`
 
 Cálculo de la gráfica de la última ejecución:
-```python -m local.plot_results```
+`python -m local.plot_results`
 
 Cálculo de la gráfica de una ejecución anterior:
-```python -m local.plot_results --run-dir results/local/20260929_014010_654321```
+`python -m local.plot_results --run-dir results/local/20260929_014010_654321`
+
+## 29/09/2026 - 1.3 Calibración de YOLO
+
+- **Cámara utilizada:** `https://www.skylinewebcams.com/es/webcam/espana/andalucia/cadiz/grazalema.html`.
+- **Experimento** (`local/calibrate_yolo.py`): 30 frames de referencia contados a mano. Se comparan los modelos `n`, `s`, `m` y `l`, con tamaños de entrada 640, 960 y 1280 y umbrales de confianza de 0.15 a 0.5. Se mide el error medio de conteo (MAE) y el tiempo de inferencia por frame. La terraza del bar no se ha tenido en cuenta en la evaluación (hay personas tapadas y difíciles de contar a mano).
+
+- **Resultados** (ver `screenshots/pareto.png`):
+  - `yolov8s` a 960 con conf 0.25: MAE 1.7 personas/frame, sin sesgo apreciable, 123 ms/frame.
+  - `yolov8n` se queda corto. Su mejor opción es 960 con conf 0.20: MAE 2.5s, 54 ms/frame.
+  - `m` y `l` solo mejoran a `s` con umbrales bajos y a un coste mucho mayor (`l` a 1280: MAE 1.2, 914 ms/frame).
+
+- **Decisión:** `yolov8s`, 960, conf 0.25. En caso de necesitar usar `yolov8n`, se usará 960 con conf 0.20.
