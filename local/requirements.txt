@@ -2,3 +2,4 @@ ultralytics
 opencv-python
 matplotlib
 python-dotenv
+requests

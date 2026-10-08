@@ -30,7 +30,8 @@ La documentación de Azure del profesorado está en `docs/azure/`:
   - 1.2 Capturar 1 frame cada 5 s.
   - 1.3 Contar personas con YOLOv8 (usar `yolov8n`), guardar CSV (fecha, nº personas) y gráfica temporal.
 - **Parte 2 – VM en Azure**
-  - 2.1 VM Standard B1s (1 GB RAM) con python3-opencv y python3-pip (`--no-cache-dir` si sale "killed").
+  - 2.1 VM con python3-opencv y python3-pip (`--no-cache-dir` si sale "killed"). El enunciado recomienda
+    Standard B1s; usamos **Standard B2ats_v2** (2 vCPU, 1 GB RAM, burstable), la más barata disponible.
   - 2.2 El cliente local envía frames a la VM.
   - 2.3 La VM ejecuta YOLOv8 y guarda CSV.
   - 2.4 Web con histograma accesible por IP pública.
@@ -73,8 +74,9 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
 - Una rama por parte (`feat/local`, `feat/vm`, `feat/serverless`, `feat/multicam`, `feat/avanzado`)
   y commits con número de tarea (p. ej. `2.3: YOLO en la VM guarda CSV`).
 - Un `requirements.txt` por componente.
-- `vm/setup_vm.sh` reproduce la VM completa: swap de 2 GB, torch **CPU-only**
-  (`--index-url https://download.pytorch.org/whl/cpu`) y dependencias.
+- La VM se configuró a mano desde el portal de Azure (no hay `vm/setup_vm.sh`); los pasos están
+  documentados con capturas. Si hay que instalar torch en ella, usar la versión **CPU-only**
+  (`--index-url https://download.pytorch.org/whl/cpu`) por el límite de 1 GB de RAM.
 - Desplegar en la VM con `git pull`, no copiando archivos a mano.
 - Anotar en `docs/bitacora.md` los problemas y decisiones, con fecha, porque la memoria los pide.
 
