@@ -73,7 +73,7 @@ def resolve_stream_url(url: str) -> str:
     
     SkylineWebcams pages do not expose a stable stream URL: the page HTML
     contains a temporary token, and the stream URL is built from it. This
-    function downloads the page, extracts the token andd returns the full
+    function downloads the page, extracts the token and returns the full
     stream URL.
 
     URLs from other sites are returned unchanged, so direct stream URLs
@@ -104,3 +104,47 @@ def resolve_stream_url(url: str) -> str:
 
     return SKYLINE_STREAM_HOST + match.group(1).replace("livee.", "live.", 1)
 
+
+class FrameSource:
+    """
+    A camera that can be captured repeatedly.
+
+    Combines ``resolve_stream_url`` and ``capture_frame``. Shared by every
+    script that captures in a loop.
+
+    Attributes:
+        camera_url: Camera page URL or direct stream URL.
+        quality: JPEG quality from 0 to 100.
+        url_resolutions: How many times the stream URL has been resolved.
+    """
+
+    def __init__(self, camera_url: str, quality: int = 90) -> None:
+        self.camera_url = camera_url
+        self.quality = quality
+        self.url_resolutions = 0
+        self._stream_url: str | None = None
+
+    def _resolve(self) -> str:
+        self._stream_url = resolve_stream_url(self.camera_url)
+        self.url_resolutions += 1
+        return self._stream_url
+
+    def capture(self) -> bytes:
+        """
+        Capture one frame as JPEG bytes, renewing the stream URL if needed.
+
+        Raises:
+            CaptureError: If the frame cannot be captured even after renewing
+                the stream URL. The URL is then discarded, so the next call
+                starts again by resolving it.
+        """
+        try:
+            stream_url = self._stream_url or self._resolve()
+            try:
+                return capture_frame(stream_url, self.quality)
+            except CaptureError:
+                # The stream token may have expired: renew it and retry once
+                return capture_frame(self._resolve(), self.quality)
+        except CaptureError:
+            self._stream_url = None
+            raise
