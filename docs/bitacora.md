@@ -130,7 +130,21 @@ Cálculo de la gráfica de una ejecución anterior:
 
 - **Resultados** (ver `screenshots/pareto.png`):
   - `yolov8s` a 960 con conf 0.25: MAE 1.7 personas/frame, sin sesgo apreciable, 123 ms/frame.
-  - `yolov8n` se queda corto. Su mejor opción es 960 con conf 0.20: MAE 2.5s, 54 ms/frame.
+  - `yolov8n` se queda corto. Su mejor opción es 960 con conf 0.20: MAE 2.5, 54 ms/frame.
   - `m` y `l` solo mejoran a `s` con umbrales bajos y a un coste mucho mayor (`l` a 1280: MAE 1.2, 914 ms/frame).
 
 - **Decisión:** `yolov8s`, 960, conf 0.25. En caso de necesitar usar `yolov8n`, se usará 960 con conf 0.20.
+
+## 09/10/2026 - 2.2 Envío de frames a la VM
+
+- **Contrato cliente <-> VM:** `POST http://<VM>:8000/frame` con el JPEG en el cuerpo y las cabeceras `Content-Type: image/jpeg`, `X-Camera-Id`, `X-Captured-At` y `Authorization: Bearer <token>`. Respuesta JSON `{"n_people", "inference_ms", "boxes"}`, 401 si el token no es válido, y 400 si la imagen no es válida. Hay que configurar en el `.env` `VM_URL`, `VM_TOKEN` y `CAMERA_ID`.
+
+- **Captura reutilizable:** La lógica de resolver la URL, capturar y renovar el token con reintento se extrae de `capture_loop.py` a la clase `FrameSource` (`common/capture.py`), para usarla en todos los clientes.
+
+- **Servidor de prueba** (`vm/fake_server.py`): Cumple el contrato sin YOLO y devuelve un resultado fijo. Sirve para probar el cliente y como base para el servidor real (2.3). El endpoint se declara con `def` y no con `async def` para que una inferencia lenta no bloquee el resto de peticiones.
+
+- **Cliente** (`local/vm_client.py`): Envía un frame cada 5 s y registra cada petición en `results/vm_client/<ejecución>/requests.csv` (`timestamp, camera_id, frame_bytes, capture_ms, latency_ms, inference_ms, n_people, status`). La latencia se mide solo alrededor del envío (ida y vuelta), sin la captura, que depende de SkylineWebcams y no de la VM. Se reutiliza la conexión para que la latencia no incluya abrir una conexión nueva en cada frame. Si hay errores se registran y el bucle continúa.
+
+- **Pruebas en local:** Correctas con el servidor de prueba, con token incorrecto y con el servidor parado. A 1080p y con calidad 90, cada frame ocupa unos 400 KB.
+
+- **Problema encontrado:** La conexión a la VM da timeout en el puerto 8000. Queda pendiente abrir el puerto 8000 (TCP) en Azure para repetir la prueba contra la VM (el repo ya está clonado y con todo configurado, solo falta el puerto).
