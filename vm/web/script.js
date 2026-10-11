@@ -67,7 +67,7 @@ const histogram = new Chart(document.getElementById("histogram"), {
 });
 
 function parseCsv(text) {
-  const [header, ...lines] = text.trim().split("\n");
+  const [header, ...lines] = text.trim().split(/\r?\n/);
   const fields = header.split(",");
   return lines.map((line) => {
     const values = line.split(",");
