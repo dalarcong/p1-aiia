@@ -22,6 +22,12 @@ PAGE_TIMEOUT_S = 10
 SKYLINE_STREAM_HOST = "https://hd-auth.skylinewebcams.com/"
 SKYLINE_SOURCE_RE = re.compile(r"source:'(livee\.m3u8\?a=[^']+)'")
 
+# SkylineWebcams returns an empty page to non-browser clients (e.g. Python's
+# default User-Agent), so the page is requested as a regular browser
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+)
 
 class CaptureError(Exception):
     """Raised when a frame cannot be captured from the stream."""
@@ -92,15 +98,17 @@ def resolve_stream_url(url: str) -> str:
     if urlparse(url).netloc != "www.skylinewebcams.com":
         return url
 
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+
     try:
-        with urllib.request.urlopen(url, timeout=PAGE_TIMEOUT_S) as response:
+        with urllib.request.urlopen(request, timeout=PAGE_TIMEOUT_S) as response:
             html = response.read().decode("utf-8", errors="replace")
     except OSError as e:
         raise CaptureError(f"Could not download the camera page: {e}") from e
 
     match = SKYLINE_SOURCE_RE.search(html)
     if match is None:
-        raise CaptureError("Stream source not found in the camera page")
+        raise CaptureError("Empty camera page (the site may be blocking the request)")
 
     return SKYLINE_STREAM_HOST + match.group(1).replace("livee.", "live.", 1)
 
