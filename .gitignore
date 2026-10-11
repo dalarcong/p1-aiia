@@ -228,3 +228,5 @@ results/local_people_timeline.png
 /results
 /calibration/ground_truth_overlay
 /calibration/*.png
+
+/vm/web/data

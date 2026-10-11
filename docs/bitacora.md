@@ -273,3 +273,11 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Calentamiento de YOLO:** Al arrancar se hace una inferencia sobre una imagen en blanco, para que el primer frame real no pague el coste inicial.
 
 - **FastAPI:** El arranque pasa de `@app.on_event("startup")` (obsoleto) a `lifespan`.
+
+## 12/10/2026 - 2.4 Web de resultados
+
+- **Servida por Apache:** Desde `/var/www/html` (`vm/web/index.html` y `vm/web/script.js` del repo), accesible en `http://<IP_VM>/`. La página lee los datos que publica el servidor (`data/detections.csv` y `data/latest.jpg`) y se actualiza cada 5 s.
+
+- **Contenido:** Personas por frame a lo largo del tiempo, histograma de personas por frame, tiempo de inferencia por frame y el último frame con las detecciones. Indicadores de personas actuales, media, máximo, frames procesados, inferencia media, tamaño medio del frame y hora de la última actualización. Un indicador de estado avisa si no llegan frames nuevos en 30 s.
+
+- **Despliegue:** Tras cada cambio, `git pull` y `cp vm/web/index.html vm/web/script.js /var/www/html`.
