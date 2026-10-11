@@ -6,7 +6,7 @@ to the VM server (POST /frame) and logs the result and the timings of every
 request in a CSV.
 
 Run from the project root:
-    python -m local.vm_client
+    python -m vm.vm_client
 """
 import csv
 import os

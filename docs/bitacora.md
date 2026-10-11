@@ -156,3 +156,100 @@ Cálculo de la gráfica de una ejecución anterior:
 - **Apache como proxy inverso:** El puerto 80 lo ocupa Apache, que reenvía `/frame` al servidor FastAPI, que escucha solo dentro de la VM (`127.0.0.1:8000`) y no es accesible desde fuera.
 
 - **Contrato actualizado:** La URL pasa a ser `POST http://<IP_VM>/frame`, sin el puerto. El resto se mantiene igual.
+
+## 11/10/2026 - 2.3 Procesamiento YOLOv8 en la VM
+
+- Se sustituyó el servidor de prueba de la tarea 2.2 por un servidor real
+  (`vm/server.py`) basado en FastAPI manteniendo el contrato definido.
+
+- Se utiliza YOLOv8 sobre CPU. El modelo se carga una única vez al arrancar
+  el servidor y se reutiliza para todas las peticiones, evitando cargar los
+  pesos en cada frame.
+
+- FastAPI se ejecuta con un único worker. Esta decisión evita tener varias
+  copias de PyTorch/YOLO simultáneamente en memoria, algo especialmente
+  importante en la VM Standard B1s debido a su memoria limitada. Para ello en la VM ejecutar:
+
+  ```
+  python -m uvicorn vm.server:app \
+  --host 127.0.0.1 \
+  --port 8000 \
+  --workers 1
+  ```
+
+  Para comprobar que está en marcha, en otra terminal dentro de la VM ejecutar:
+  
+  ```
+  curl http://127.0.0.1:8000/health
+  ```
+
+- Las inferencias se serializan mediante un Lock. De este modo varias
+  peticiones pueden llegar al servidor, pero solo una utiliza el modelo
+  YOLO cada vez. Esta decisión también permitirá observar posteriormente
+  la formación de colas al realizar las pruebas multicámara.
+
+- El servidor devuelve un JSON con:
+
+      {
+          "n_people": ...,
+          "inference_ms": ...,
+          "boxes": [...]
+      }
+
+- `inference_ms` mide únicamente el procesamiento de YOLO dentro de la VM.
+  La latencia total (`latency_ms`) se sigue midiendo en el cliente, alrededor
+  de la petición HTTP completa, por lo que incluye transferencia, Apache,
+  FastAPI, posibles esperas y procesamiento.
+
+- Los resultados procesados por la VM se almacenan en:
+
+      results/vm/<fecha-hora>/detections.csv
+
+  con los campos:
+
+      captured_at,received_at,camera_id,n_people,inference_ms,frame_bytes
+
+- Se utiliza un entorno virtual de Python en la VM para instalar PyTorch,
+  Ultralytics y FastAPI sin modificar el Python administrado por el sistema.
+  PyTorch se instaló en su versión CPU-only. Para acceder:
+
+  ```
+  source .venv/bin/activate
+  ```
+  
+### Validación
+
+Se realizó una prueba extremo a extremo:
+
+    webcam -> cliente local -> HTTP -> Apache -> FastAPI -> YOLOv8 -> respuesta
+
+El cliente obtuvo, entre otros, los siguientes resultados:
+
+    people=25, latency=5618 ms, inference=4836 ms
+    people=28, latency=3779 ms, inference=3375 ms
+    people=26, latency=9065 ms, inference=8771 ms
+    people=32, latency=4651 ms, inference=4428 ms
+    people=30, latency=4360 ms, inference=4006 ms
+    people=31, latency=4031 ms, inference=3726 ms
+    people=24, latency=3966 ms, inference=3643 ms
+
+La prueba confirma que la mayor parte de la latencia se debe al tiempo de
+inferencia en la CPU de la VM, mientras que la diferencia entre
+`latency_ms` e `inference_ms` corresponde al resto de costes del sistema
+(red, Apache/FastAPI, serialización, etc.).
+
+### Problemas observados
+
+- Durante algunas capturas OpenCV/FFmpeg mostró avisos H.264 del tipo:
+
+      non-existing PPS 0 referenced
+      decode_slice_header error
+      no frame!
+
+  Estos errores proceden de la decodificación del stream de la webcam en el
+  cliente y no del procesamiento en Azure. El cliente consiguió recuperarse
+  y seguir capturando frames posteriores.
+
+- La VM Standard B1s presenta tiempos de inferencia elevados y variables.
+  En esta primera prueba se observaron aproximadamente entre 3,4 s y 8,8 s
+  por frame.
