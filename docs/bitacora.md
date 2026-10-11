@@ -263,3 +263,13 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Comparación:** La VM es unas 3,7 veces más lenta que el portátil con la misma configuración (460 ms frente a 123 ms).
 
 - **Conclusión:** Con una cámara (un frame cada 5 s), la inferencia ocupa alrededor del 9% de la CPU, por debajo del 20% base, así que la VM puede mantener ese ritmo indefinidamente.
+
+## 11/10/2026 - 2.4 Publicación de resultados para la web
+
+- **Datos para la web:** Si está definida `VM_WEB_DATA_DIR` (en la VM, `/var/www/html/data`, servida por Apache), el servidor publica tras cada frame la última imagen con las cajas y una copia del CS de la ejecución. El CSV de la web se vacía al arrancar el servidor: la web muestra la ejecución actual.
+
+- **Errores de la web:** Si falla la publicación, se registra pero la petición responde igualmente 200. La publicación se hace fuera del lock de inferencia, así que suma algo a la latencia del cliente pero no a `inference_ms`.
+
+- **Calentamiento de YOLO:** Al arrancar se hace una inferencia sobre una imagen en blanco, para que el primer frame real no pague el coste inicial.
+
+- **FastAPI:** El arranque pasa de `@app.on_event("startup")` (obsoleto) a `lifespan`.
