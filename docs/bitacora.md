@@ -281,3 +281,17 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Contenido:** Personas por frame a lo largo del tiempo, histograma de personas por frame, tiempo de inferencia por frame y el último frame con las detecciones. Indicadores de personas actuales, media, máximo, frames procesados, inferencia media, tamaño medio del frame y hora de la última actualización. Un indicador de estado avisa si no llegan frames nuevos en 30 s.
 
 - **Despliegue:** Tras cada cambio, `git pull` y `cp vm/web/index.html vm/web/script.js /var/www/html`.
+
+## 11/10/2026 - 2.4 Falta de memoria en la VM
+
+- **Síntoma:** Con la web activa, la inferencia pasó a más de 10 s por frame.
+
+- **Diagnóstico:** RAM llena (15 MB disponibles de 892) y la VM sin swamp. `vmstat` mostraba lecturas continuas del disco y la CPU esperando al disco. Sin swap, el sistema expulsaba de la RAM el código de las librerías de Pytorch y lo volvía a leer en cada inferencia.
+
+- **Causa:** La publicación para la web añadió memoria al servidor, que ya estaba casi al límite.
+
+- **Solución:** swap de 2 GB. La inferencia vuelve a los valores normales sin cambiar de modelo.
+
+- **Después del swap:** 160 MB de RAM disponibles (antes 15), 236 MB de caché (antes 53), 184 MB en el swap y sin lecturas continuas de disco.
+
+- **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.

@@ -86,7 +86,10 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
 - Un `requirements.txt` por componente.
 - La VM se configuró a mano desde el portal de Azure (no hay `vm/setup_vm.sh`); los pasos están
   documentados con capturas. Venv en `~/p1-aiia/.venv`, con torch **CPU-only**
-  (`--index-url https://download.pytorch.org/whl/cpu`) por el límite de 1 GB de RAM.
+  (`--index-url https://download.pytorch.org/whl/cpu`) por el límite de 1 GB de RAM (892 MiB útiles).
+- **Swap de 2 GB obligatorio** (`/swapfile`, activado en `/etc/fstab`). Sin él, con la web activa la RAM se
+  llena, el sistema expulsa y relee del disco el código de torch en cada frame y la inferencia pasa de
+  ~0,5 s a más de 10 s. Si vuelve a pasar: `vmstat 1` (columnas `bi` y `wa` altas) y `free -h`.
 - Arquitectura de la VM: solo puertos 22 y 80 abiertos. **Apache** en el 80 sirve la web (2.4) y hace de
   proxy inverso de `/frame` hacia **FastAPI** (`vm/server.py`) en `127.0.0.1:8000` (no expuesto). El
   servidor se lanza a mano: `python -m uvicorn vm.server:app --host 127.0.0.1 --port 8000 --workers 1`.
