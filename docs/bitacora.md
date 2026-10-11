@@ -178,7 +178,7 @@ Cálculo de la gráfica de una ejecución anterior:
   ```
 
   Para comprobar que está en marcha, en otra terminal dentro de la VM ejecutar:
-  
+
   ```
   curl http://127.0.0.1:8000/health
   ```
@@ -216,7 +216,7 @@ Cálculo de la gráfica de una ejecución anterior:
   ```
   source .venv/bin/activate
   ```
-  
+
 ### Validación
 
 Se realizó una prueba extremo a extremo:
@@ -253,3 +253,13 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - La VM Standard B1s presenta tiempos de inferencia elevados y variables.
   En esta primera prueba se observaron aproximadamente entre 3,4 s y 8,8 s
   por frame.
+
+## 11/10/2026 - 2.3 Tiempos de inferencia en la VM y créditos de CPU
+
+- **Problema:** En la primera prueba la inferencia tardaba entre 3,4 y 8,8 s por frame. La VM es "burstable": rinde al 100% mientras tiene créditos de CPU y, si se agotan, queda limitada a su rendimiento base (20%). La instalación de Pytorch y Ultralytics, justo antes de la prueba, agotó los créditos.
+
+- **Repetición con créditos:** Unos 460 ms por frame estables. Los primeros frames tardan 1-1.4 s por el calentamiento del modelo.
+
+- **Comparación:** La VM es unas 3,7 veces más lenta que el portátil con la misma configuración (460 ms frente a 123 ms).
+
+- **Conclusión:** Con una cámara (un frame cada 5 s), la inferencia ocupa alrededor del 9% de la CPU, por debajo del 20% base, así que la VM puede mantener ese ritmo indefinidamente.

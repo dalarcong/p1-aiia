@@ -28,7 +28,9 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 - **Parte 1 – Local**
   - 1.1 Elegir webcam pública fija con personas.
   - 1.2 Capturar 1 frame cada 5 s.
-  - 1.3 Contar personas con YOLOv8 (usar `yolov8n`), guardar CSV (fecha, nº personas) y gráfica temporal.
+  - 1.3 Contar personas con YOLOv8, guardar CSV (fecha, nº personas) y gráfica temporal. Configuración elegida
+    con la calibración (`local/calibrate_yolo.py`): `yolov8s`, imgsz 960, conf 0.25; alternativa ligera si la
+    VM no da abasto: `yolov8n`, imgsz 960, conf 0.20.
 - **Parte 2 – VM en Azure**
   - 2.1 VM con python3-opencv y python3-pip (`--no-cache-dir` si sale "killed"). El enunciado recomienda
     Standard B1s; usamos **Standard B2ats_v2** (2 vCPU, 1 GB RAM, burstable), la más barata disponible.
@@ -56,8 +58,16 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 
 - `capture_frame(url) -> bytes (JPEG)` en `common/capture.py`.
 - `count_people(img) -> (n, boxes)` en `common/count_people.py`.
-- CSV de resultados (`common/results.py`): de momento `timestamp, n_people` (Parte 1). Las
-  columnas para comparar arquitecturas (latencia, tamaño del frame, etc.) se acordarán en la Parte 2.
+- `FrameSource(camera_url).capture() -> bytes` en `common/capture.py`: captura con renovación del token
+  de SkylineWebcams. Usarla en todos los bucles de captura.
+- Contrato cliente ↔ VM: `POST http://<IP_VM>/frame`, cuerpo JPEG, cabeceras `Content-Type: image/jpeg`,
+  `X-Camera-Id`, `X-Captured-At` (ISO 8601), `Authorization: Bearer <VM_TOKEN>`. Respuesta JSON
+  `{n_people, inference_ms, boxes}`; 401 token inválido, 400 petición/JPEG inválido, 500 fallo de inferencia.
+- CSV local (Parte 1, `common/results.py`): `timestamp, n_people`.
+- CSV del cliente (`vm/vm_client.py`, `results/vm_client/<run>/requests.csv`):
+  `timestamp, camera_id, frame_bytes, capture_ms, latency_ms, inference_ms, n_people, status`.
+- CSV del servidor (`vm/server.py`, `results/vm/<run>/detections.csv`):
+  `captured_at, received_at, camera_id, n_people, inference_ms, frame_bytes`.
 
 ## Estructura del repo
 
@@ -75,8 +85,15 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
   y commits con número de tarea (p. ej. `2.3: YOLO en la VM guarda CSV`).
 - Un `requirements.txt` por componente.
 - La VM se configuró a mano desde el portal de Azure (no hay `vm/setup_vm.sh`); los pasos están
-  documentados con capturas. Si hay que instalar torch en ella, usar la versión **CPU-only**
+  documentados con capturas. Venv en `~/p1-aiia/.venv`, con torch **CPU-only**
   (`--index-url https://download.pytorch.org/whl/cpu`) por el límite de 1 GB de RAM.
+- Arquitectura de la VM: solo puertos 22 y 80 abiertos. **Apache** en el 80 sirve la web (2.4) y hace de
+  proxy inverso de `/frame` hacia **FastAPI** (`vm/server.py`) en `127.0.0.1:8000` (no expuesto). El
+  servidor se lanza a mano: `python -m uvicorn vm.server:app --host 127.0.0.1 --port 8000 --workers 1`.
+  Endpoints con `def` (no `async def`) e inferencia serializada con un Lock.
+- El repo es privado: la VM lo clona con una deploy key de solo lectura.
+- SkylineWebcams devuelve una página vacía a clientes no navegadores: `resolve_stream_url` envía un
+  User-Agent de navegador.
 - Desplegar en la VM con `git pull`, no copiando archivos a mano.
 - Anotar en `docs/bitacora.md` los problemas y decisiones, con fecha, porque la memoria los pide.
 
@@ -100,3 +117,4 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
 - Preferencia por escenas tranquilas: 2–10 personas por frame, bien separadas, con las personas
   ocupando al menos un 5–10 % del alto de la imagen.
 - Fuentes sugeridas por el enunciado: EarthCam, SkylineWebcams y WebcamTaxi.
+- Cámara principal: Grazalema (SkylineWebcams). Tenerife (Los Cristianos) reservada para la Parte 4.
