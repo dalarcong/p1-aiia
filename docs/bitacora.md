@@ -148,3 +148,11 @@ Cálculo de la gráfica de una ejecución anterior:
 - **Pruebas en local:** Correctas con el servidor de prueba, con token incorrecto y con el servidor parado. A 1080p y con calidad 90, cada frame ocupa unos 400 KB.
 
 - **Problema encontrado:** La conexión a la VM da timeout en el puerto 8000. Queda pendiente abrir el puerto 8000 (TCP) en Azure para repetir la prueba contra la VM (el repo ya está clonado y con todo configurado, solo falta el puerto).
+
+## 11/10/2026 - 2.2 Conexión con la VM a través de Apache
+
+- **Puertos:** Solo se exponen el 22 (SSH) y el 80 (HTTP). No se abre el 8000.
+
+- **Apache como proxy inverso:** El puerto 80 lo ocupa Apache, que reenvía `/frame` al servidor FastAPI, que escucha solo dentro de la VM (`127.0.0.1:8000`) y no es accesible desde fuera.
+
+- **Contrato actualizado:** La URL pasa a ser `POST http://<IP_VM>/frame`, sin el puerto. El resto se mantiene igual.
