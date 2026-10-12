@@ -295,3 +295,9 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Después del swap:** 160 MB de RAM disponibles (antes 15), 236 MB de caché (antes 53), 184 MB en el swap y sin lecturas continuas de disco.
 
 - **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.
+
+## 12/10/2026 - 2.5 Eficacia de la detección en la VM
+
+- **Método** (`vm/eval_effectiveness.py`): Los 30 frames de referencia se envían a la VM con el mismo contrato del cliente. Las cajas devueltas se filtran con la misma zona excluida usada en el conteo manual y se comparan con `calibration/ground_truth.csv`.
+
+- **Resultado:** MAE 1.70 personas/frame, sesgo +0.30, 5/30 conteos exactos. Inferencia media en la VM: 497 ms (frente a 123 ms en el portátil).
