@@ -353,3 +353,25 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
   - **Parada limpia:** Al cumplirse la duración o con Ctrl+C, cada hilo termina su petición en curso antes de cerrar el CSV.
 
 - **Pruebas:** En local con el servidor de prueba (3 cámaras, escalonado y periodo correctos) y contra la VM con 2 cámaras durante 60 s: 25/25 frames correctos, inferencia mediana de 444 ms y latencia mediana de 1438 ms.
+
+## 12/10/2026 - 4.2 Barrido con captura en directo (en curso)
+
+- **Prueba:** `multicam/sweep.py` con cámaras reales capturadas en directo desde el portátil: escalones de 2, 4, 6 y 8 cámaras de 60 s (19:00–19:05 CEST) y una prueba previa con 16 cámaras (~45 s). Datos en `docs/results/4_2_live_capture/`.
+
+- **Resultados** (por escalón: frames procesados / esperados; captura mediana y p95; latencia mediana en la VM; periodo real por cámara):
+
+  | Cámaras | Frames | Captura (med / p95) | Latencia VM (med) | Periodo por cámara |
+  |---|---|---|---|---|
+  | 2 | 25 / 26 | 1,0 / 1,2 s | 934 ms | 5 s |
+  | 4 | 48 / 51 | 1,0 / 1,2 s | 873 ms | 5 s |
+  | 6 | 61 / 76 | 4,2 / 7,1 s | 889 ms | 5 s (frames perdidos) |
+  | 8 | 65 / 102 | 6,5 / 10,3 s | 948 ms | 7 s |
+  | 16 | 41 / 109 | 13,0 / 17,3 s | 1025 ms | 12 s |
+
+- **Conclusión: el cuello de botella es la captura, no la VM.** Cada captura abre el stream HLS de la cámara, descarga un fragmento de vídeo 1080p y lo decodifica para quedarse con un frame. Desde un solo portátil, el total se estanca en ~1 frame/s (0,97; 1,02 y 1,21 frames/s con 6, 8 y 16 cámaras), es decir, unas **4–5 cámaras** a un frame cada 5 s. Por encima, la captura tarda más de 5 s y cada cámara envía menos frames de los que debería.
+
+- **La VM no llegó a estar exigida:** inferencia constante (443–449 ms) y latencia mediana estable (~0,9–1 s) en todos los escalones, porque nunca recibió más de ~1,2 frames/s.
+
+- **Decisión:** la captura en directo se usa para la 4.1 y para mostrar este límite del lado del cliente. Para encontrar el límite de la VM (4.2) se reenvían **frames reales grabados** de esas mismas cámaras (modo replay), que eliminan el coste de captura. Se justifica porque la carga de la VM depende del número y tamaño de los frames, no de su contenido (la inferencia es casi constante). En un despliegue real cada cámara capturaría su propia imagen y este cuello de botella no existiría.
+
+- **Incidencia:** la cámara de Rimini falla siempre al capturar (`capture_error`) y se retira de `multicam/cameras.txt` (quedan 15).

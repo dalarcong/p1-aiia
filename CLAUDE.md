@@ -122,3 +122,6 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
   ocupando al menos un 5–10 % del alto de la imagen.
 - Fuentes sugeridas por el enunciado: EarthCam, SkylineWebcams y WebcamTaxi.
 - Cámara principal: Grazalema (SkylineWebcams). Tenerife (Los Cristianos) reservada para la Parte 4.
+- Parte 4: cámaras en `multicam/cameras.txt` (`<id> <url>`), lanzador `multicam/launcher.py` y barrido
+  `multicam/sweep.py`. La captura en directo desde un solo portátil se satura en ~1 frame/s en total
+  (~4–5 cámaras a 1 frame/5 s): para medir el límite de la VM se usan frames grabados (modo replay).
