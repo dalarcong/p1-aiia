@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import csv
 import os
+import itertools
 import threading
 import time
 from datetime import datetime
@@ -52,17 +53,26 @@ def _arguments() -> argparse.Namespace:
         default=None,
         help="Seconds between frames of each camera (default: CAPTURE_INTERVAL or 5)"
     )
+    parser.add_argument(
+        "--replay",
+        type=Path,
+        default=None,
+        help="Folder with recorded frames (<folder>/<camera_id>/*.jpg) to send instead of capturing",
+    )
 
     return parser.parse_args()
 
 
-def load_cameras(n: int) -> list[tuple[str, str]]:
-    """Return the first n (camera_id, page_url) pairs of the cameras file."""
+def load_cameras(n: int | None = None) -> list[tuple[str, str]]:
+    """Return the first n (camera_id, page_url) pairs of the cameras file (all if None)."""
     lines = [
         line.split()
         for line in CAMERAS_FILE.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.startswith("#")
     ]
+
+    if n is None:
+        n = len(lines)
 
     if not 1 <= n <= len(lines):
         raise SystemExit(f"--cameras must be between 1 and {len(lines)} ({CAMERAS_FILE})")
@@ -88,9 +98,25 @@ class CsvLog:
         self._handle.close()
 
 
+class ReplaySource:
+    """
+    Recorded frames of one camera, returned one after another in a loop.
+
+    Same capture() interface as FrameSource.
+    """
+    def __init__(self, frames_dir: Path) -> None:
+        paths = sorted(frames_dir.glob("*.jpg"))
+        if not paths:
+            raise SystemExit(f"No recorded frames in {frames_dir}")
+        self._frames = itertools.cycle([path.read_bytes() for path in paths])
+
+    def capture(self) -> bytes:
+        return next(self._frames)
+
+
 def _camera_loop(
     camera_id: str,
-    camera_url: str,
+    source: FrameSource | ReplaySource,
     vm_url: str,
     token: str,
     interval: float,
@@ -99,7 +125,6 @@ def _camera_loop(
     log: CsvLog,
 ) -> None:
     """Capture and send one frame every `interval` seconds until `stop` is set."""
-    source = FrameSource(camera_url)
     session = requests.Session()
 
     # Staggered start: cameras send at different moments within the interval,
@@ -145,15 +170,24 @@ def run_cameras(
     interval: float,
     vm_url: str,
     token: str,
+    replay_dir: Path | None = None
 ) -> tuple[Path, bool]:
     """
     Send frames from the first n_cameras cameras for `duration` seconds.
 
+    Frames are captured live from each webcam or, with replay_dir, taken from
+    the frames recorded by multicam/record.py.
     With duration None, run until Ctrl+C. Returns the run folder and whether
     the run was interrupted with Ctrl+C, so a caller such as the sweep can
     stop too.
     """
     cameras = load_cameras(n_cameras)
+
+    # Built before starting the threads, so missing recordings stop the run at once
+    sources = [
+        ReplaySource(replay_dir / camera_id) if replay_dir else FrameSource(url)
+        for camera_id, url in cameras
+    ]
 
     run_dir = RESULTS_DIR / f"{datetime.now():%Y%m%d_%H%M%S}_{len(cameras)}cams"
     run_dir.mkdir(parents=True)
@@ -163,13 +197,14 @@ def run_cameras(
     threads = [
         threading.Thread(
             target=_camera_loop,
-            args=(camera_id, url, vm_url, token, interval, i * interval / len(cameras), stop, log),
+            args=(camera_id, source, vm_url, token, interval, i * interval / len(cameras), stop, log),
             name=camera_id,
         )
-        for i, (camera_id, url) in enumerate(cameras)
+        for i, ((camera_id, _), source) in enumerate(zip(cameras, sources))
     ]
 
-    print(f"{len(cameras)} cameras, one frame every {interval}s each, to {vm_url}")
+    mode = f"replaying frames from {replay_dir}" if replay_dir else "live capture"
+    print(f"{len(cameras)} cameras ({mode}), one frame every {interval}s each, to {vm_url}")
     print(f"Logging requests in {run_dir / 'requests.csv'} (Ctrl+C to stop)")
     for thread in threads:
         thread.start()
@@ -201,7 +236,7 @@ def main() -> None:
     vm_url = os.environ["VM_URL"].rstrip("/")
     token = os.environ["VM_TOKEN"]
     interval = args.interval or float(os.getenv("CAPTURE_INTERVAL", "5"))
-    run_cameras(args.cameras, args.duration, interval, vm_url, token)
+    run_cameras(args.cameras, args.duration, interval, vm_url, token, args.replay)
 
 
 if __name__ == "__main__":

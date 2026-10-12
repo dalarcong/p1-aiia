@@ -18,6 +18,7 @@ import csv
 import os
 import time
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -42,6 +43,12 @@ def _arguments() -> argparse.Namespace:
         default=None,
         help="Seconds between frames of each camera (default: CAPTURE_INTERVAL or 5)",
     )
+    parser.add_argument(
+        "--replay",
+        type=Path,
+        default=None,
+        help="Folder with recorded frames to send instead of capturing (see multicam/record.py)",
+    )
     return parser.parse_args()
 
 
@@ -52,8 +59,11 @@ def main() -> None:
     token = os.environ["VM_TOKEN"]
     interval = args.interval or float(os.getenv("CAPTURE_INTERVAL", "5"))
 
-    # Checked before starting, not when the largest step is reached
-    load_cameras(max(args.steps))
+    cameras = load_cameras(max(args.steps))
+    if args.replay:
+        missing = [cid for cid, _ in cameras if not any((args.replay / cid).glob("*.jpg"))]
+        if missing:
+            raise SystemExit(f"No recorded frames in {args.replay} for: {', '.join(missing)}")
 
     total_s = len(args.steps) * args.duration + (len(args.steps) - 1) * args.pause
     end_estimate = datetime.now() + timedelta(seconds=total_s)
@@ -70,7 +80,7 @@ def main() -> None:
         for step, n_cameras in enumerate(args.steps, start=1):
             print(f"\n=== Step {step}/{len(args.steps)}: {n_cameras} cameras for {args.duration:.0f} s ===")
             start = datetime.now().astimezone()
-            run_dir, interrupted = run_cameras(n_cameras, args.duration, interval, vm_url, token)
+            run_dir, interrupted = run_cameras(n_cameras, args.duration, interval, vm_url, token, args.replay)
 
             writer.writerow(
                 {
