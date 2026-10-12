@@ -33,7 +33,8 @@ La documentación de Azure del profesorado está en `docs/azure/`:
     VM no da abasto: `yolov8n`, imgsz 960, conf 0.20.
 - **Parte 2 – VM en Azure**
   - 2.1 VM con python3-opencv y python3-pip (`--no-cache-dir` si sale "killed"). El enunciado recomienda
-    Standard B1s; usamos **Standard B2ats_v2** (2 vCPU, 1 GB RAM, burstable), la más barata disponible.
+    Standard B1s; usamos **Standard B2ats_v2** (2 vCPU, 1 GB RAM, burstable), la más barata disponible, en
+    **Poland Central**. Coste: VM 0,0095 €/h + disco E4 2,11 €/mes + IP estática 0,0044 €/h ≈ 0,0168 €/h.
   - 2.2 El cliente local envía frames a la VM.
   - 2.3 La VM ejecuta YOLOv8 y guarda CSV.
   - 2.4 Web con histograma accesible por IP pública.

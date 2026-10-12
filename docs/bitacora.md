@@ -302,13 +302,13 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Método** (`vm/eval_effectiveness.py`): Los 30 frames de referencia se envían a la VM con el mismo contrato del cliente. Las cajas devueltas se filtran con la misma zona excluida usada en el conteo manual y se comparan con `calibration/ground_truth.csv`.
 
-- **Resultado:** MAE 1.70 personas/frame, sesgo +0.30, 5/30 conteos exactos. Inferencia media en la VM: 497 ms (frente a 123 ms en el portátil).
+- **Resultado:** MAE 1.70 personas/frame, sesgo +0.30, 5/30 conteos exactos. Inferencia media en la VM: 497 ms (frente a 123 ms en el portátil); los dos primeros frames, más lentos por estar el servidor recién arrancado (1048 y 1423 ms), suben la media. En la prueba de 10 minutos la mediana es de 445 ms. El conteo es idéntico al del modelo en local: la eficacia no depende de dónde se ejecute la IA.
 
 ### Prueba de rendimiento
 
 - **Condiciones:** 12/10/2026, de 11:51:02 a 12:01:02 (CEST). Cámara de Grazalema, de día. Una cámara, un frame cada 5 s. `yolov8s`, imgsz 960, conf 0.25. VM B2ats_v2 con swap de 2 GB y la web activa. Cliente en el portátil.
 
-- **Datos:** `docs/results/2_5_vm`. EL monitor de la VM se lanzó un minuto antes y se paró un minuto después.
+- **Datos:** `docs/results/2_5_vm`. El monitor de la VM se lanzó un minuto antes y se paró un minuto después. Sus columnas de red (`net_recv_kbps`, `net_sent_kbps`) no son válidas en esta prueba: contaban dos veces cada frame al sumar la interfaz interna (`lo`), por la que Apache reenvía los frames a FastAPI. Corregido después en el monitor (`_external_traffic`).
 
 - **Frames:** 117 de 120, todos correctos. Los 3 que faltan se deben a una captura de SkylineWebcams que tardó 21,7 s.
 
@@ -318,11 +318,17 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Memoria:** Unos 190 MB disponibles y 265 MB en el swap, estables. Iowait ~0 %. El servidor ocupa 407-443 MB.
 
-- **Ancho de banda:** 456 KB por frame (1080p, calidad 90,), unos 91 KB/s durante la prueba.
+- **Ancho de banda:** 456 KiB por frame (1080p, calidad 90), unos 89 KiB/s de subida durante la prueba.
 
-### Problema
+- **Análisis** (`vm/analyze_run.py`): Tabla resumen y gráficas en `docs/results/2_5_vm/analysis` (`summary.md`, `latency_timeline.png`, `latency_distribution.png`, `vm_resources.png`). La inferencia es casi constante. La variación de latencia viene de la red y del resto de la petición.
 
-- Las columnas de red de `vm_monitor.csv` (`net_recv_kbps`, `net_sent_kbps`) **cuentan cada frame dos veces**: el monitor sumaba también la interfaz interna (`lo`), por la que Apache reenvía cada frame a FastAPI. No usar esas columnas en esta prueba; se corrige el monitor para las siguientes.
+### Coste
+
+- **Tarifas** (pago por uso, Linux, Poland Central; API pública de precios de Azure, consultada el 12/10/2026): VM B2ats v2 0,0095 €/h; disco Standard SSD E4 2,11 €/mes (~0,0029 €/h); IP pública estática 0,0044 €/h. **Total ~0,0168 €/h (~12,3 €/mes).**
+
+- **Coste por frame:** 0,0000239 € con los 704 frames/hora procesados en la prueba (0,0000233 € con los 720 teóricos de un frame cada 5 s). Solo la VM: ~0,0000132 €/frame.
+
+- El coste de la VM es fijo por hora, se procesen frames o no: con más cámaras el coste por frame baja, hasta el límite que aguante la VM. El tráfico de entrada (los frames) es gratuito.
 
 ### Pendiente (Laura, en el portal de Azure)
 
@@ -332,6 +338,5 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
   - _Available Memory Bytes_ (Min).
   - _Network In Total_ y _Network Out Total_ (Sum): ancho de banda externo real.
   - _Disk Read Bytes_ (Sum).
-- **Resumen de la VM** y **precio por hora** de la B2ats_v2, para el cálculo de coste.
 - **Cost Management** (_Cost analysis_), a partir del día siguiente, filtrado por el grupo de recursos.
 - Capturas en `docs/screenshots/` con el formato `2_5_azure_<métrica>.png`, y, si el portal lo permite, exportación a CSV.
