@@ -295,3 +295,25 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Después del swap:** 160 MB de RAM disponibles (antes 15), 236 MB de caché (antes 53), 184 MB en el swap y sin lecturas continuas de disco.
 
 - **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.
+
+
+## 11/10/2026 - 3.2 Subida de imágenes al contenedor propio
+Subida de imágenes al contenedor compleatada. Ejecutar con:
+```
+python -m serverless.upload_loop
+```
+Se añadieron 4 nuevos valores en el ``.env``
+
+```
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+AZURE_RAW_CONTAINER=
+AZURE_RAW_PREFIX=
+
+CAPTURE_INTERVAL_SERVERLESS=
+```
+
+Se configuró un periodo objetivo de subida de 0,5 s, siguiendo el ejemplo del enunciado. Sin embargo, la frecuencia efectiva resultó inferior debido a que el proceso de captura abre y decodifica el stream H.264 en cada iteración. En las pruebas realizadas, la captura y subida requirieron aproximadamente entre 1,5 y 4 s por frame. Al superar este tiempo el intervalo configurado, el cliente inicia inmediatamente el siguiente ciclo sin espera adicional. Finalmente se ha dejado fijado el intervalo de subida en 2.5s.
+
+En Windows durante la captura se observaron avisos de FFmpeg relativos a SPS/PPS del flujo H.264. Al tratarse de avisos asociados al stream de la webcam y continuar obteniéndose imágenes válidas, no se introdujo tratamiento adicional.
+
+Asimismo, se ha detectado una posible optimización a evaluar más adelante de ``source.capture()`` manteniendo el stream abierto.
