@@ -112,7 +112,7 @@ def main() -> None:
                     # Round trip only (upload + inference + answer), without
                     # the capture, which depends on the webcams site
                     sent = time.perf_counter()
-                    result = _send_frame(session, vm_url, token, camera_id, jpeg, now)
+                    result = send_frame(session, vm_url, token, camera_id, jpeg, now)
                     row["latency_ms"] = round((time.perf_counter() - sent) * 1000, 1)
                     row["inference_ms"] = result["inference_ms"]
                     row["n_people"] = result["n_people"]

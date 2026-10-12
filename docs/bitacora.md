@@ -282,6 +282,8 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Despliegue:** Tras cada cambio, `git pull` y `cp vm/web/index.html vm/web/script.js /var/www/html`.
 
+
+
 ## 11/10/2026 - 2.4 Falta de memoria en la VM
 
 - **Síntoma:** Con la web activa, la inferencia pasó a más de 10 s por frame.
@@ -297,7 +299,55 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.
 
 
-## 11/10/2026 - 3.2 Subida de imágenes al contenedor propio
+
+## 12/10/2026 - 2.5 Métricas de la VM (en curso)
+
+### Eficacia
+
+- **Método** (`vm/eval_effectiveness.py`): Los 30 frames de referencia se envían a la VM con el mismo contrato del cliente. Las cajas devueltas se filtran con la misma zona excluida usada en el conteo manual y se comparan con `calibration/ground_truth.csv`.
+
+- **Resultado:** MAE 1.70 personas/frame, sesgo +0.30, 5/30 conteos exactos. Inferencia media en la VM: 497 ms (frente a 123 ms en el portátil); los dos primeros frames, más lentos por estar el servidor recién arrancado (1048 y 1423 ms), suben la media. En la prueba de 10 minutos la mediana es de 445 ms. El conteo es idéntico al del modelo en local: la eficacia no depende de dónde se ejecute la IA.
+
+### Prueba de rendimiento
+
+- **Condiciones:** 12/10/2026, de 11:51:02 a 12:01:02 (CEST). Cámara de Grazalema, de día. Una cámara, un frame cada 5 s. `yolov8s`, imgsz 960, conf 0.25. VM B2ats_v2 con swap de 2 GB y la web activa. Cliente en el portátil.
+
+- **Datos:** `docs/results/2_5_vm`. El monitor de la VM se lanzó un minuto antes y se paró un minuto después. Sus columnas de red (`net_recv_kbps`, `net_sent_kbps`) no son válidas en esta prueba: contaban dos veces cada frame al sumar la interfaz interna (`lo`), por la que Apache reenvía los frames a FastAPI. Corregido después en el monitor (`_external_traffic`).
+
+- **Frames:** 117 de 120, todos correctos. Los 3 que faltan se deben a una captura de SkylineWebcams que tardó 21,7 s.
+
+- **Tiempo de respuesta** (mediana / p95): latencia 920 / 1178 ms; inferencia 445 / 449 ms; resto (red, Apache y publicación web) 474 / 728 ms.
+
+- **CPU:** Media 4%, máximo 32%. Steal 0% durante toda la prueba: sin limitación por créditos. Con una cámara la carga está muy por debajo del 20% base.
+
+- **Memoria:** Unos 190 MB disponibles y 265 MB en el swap, estables. Iowait ~0 %. El servidor ocupa 407-443 MB.
+
+- **Ancho de banda:** 456 KiB por frame (1080p, calidad 90), unos 89 KiB/s de subida durante la prueba.
+
+- **Análisis** (`vm/analyze_run.py`): Tabla resumen y gráficas en `docs/results/2_5_vm/analysis` (`summary.md`, `latency_timeline.png`, `latency_distribution.png`, `vm_resources.png`). La inferencia es casi constante. La variación de latencia viene de la red y del resto de la petición.
+
+### Coste
+
+- **Tarifas** (pago por uso, Linux, Poland Central; API pública de precios de Azure, consultada el 12/10/2026): VM B2ats v2 0,0095 €/h; disco Standard SSD E4 2,11 €/mes (~0,0029 €/h); IP pública estática 0,0044 €/h. **Total ~0,0168 €/h (~12,3 €/mes).**
+
+- **Coste por frame:** 0,0000239 € con los 704 frames/hora procesados en la prueba (0,0000233 € con los 720 teóricos de un frame cada 5 s). Solo la VM: ~0,0000132 €/frame.
+
+- El coste de la VM es fijo por hora, se procesen frames o no: con más cámaras el coste por frame baja, hasta el límite que aguante la VM. El tráfico de entrada (los frames) es gratuito.
+
+### Pendiente (Laura, en el portal de Azure)
+
+- **Azure Monitor**, ventana de **11:46 a 12:06 (CEST)**, granularidad de 1 minuto:
+  - _Percentage CPU_ (Avg y Max).
+  - _CPU Credits Remaining_ y _CPU Credits Consumed_.
+  - _Available Memory Bytes_ (Min).
+  - _Network In Total_ y _Network Out Total_ (Sum): ancho de banda externo real.
+  - _Disk Read Bytes_ (Sum).
+- **Cost Management** (_Cost analysis_), a partir del día siguiente, filtrado por el grupo de recursos.
+- Capturas en `docs/screenshots/` con el formato `2_5_azure_<métrica>.png`, y, si el portal lo permite, exportación a CSV.
+
+
+
+## 12/10/2026 - 3.2 Subida de imágenes al contenedor propio
 Subida de imágenes al contenedor compleatada. Ejecutar con:
 ```
 python -m serverless.upload_loop
