@@ -11,6 +11,6 @@ san-candido https://www.skylinewebcams.com/es/webcam/italia/trentino-alto-adige/
 san-remo https://www.skylinewebcams.com/es/webcam/italia/liguria/imperia/festival-sanremo-ariston.html
 perugia https://www.skylinewebcams.com/es/webcam/italia/umbria/perugia/piazza-iv-novembre.html
 corso-vanucci https://www.skylinewebcams.com/es/webcam/italia/umbria/perugia/corso-vannucci.html
-rimini skylinewebcams.com/es/webcam/italia/emilia-romagna/rimini/arco-di-augusto.html
+rimini https://skylinewebcams.com/es/webcam/italia/emilia-romagna/rimini/arco-di-augusto.html
 playa-sardinero https://www.skylinewebcams.com/es/webcam/espana/cantabria/santander/playa-del-sardinero.html
 santa-cruz-de-la-palma https://www.skylinewebcams.com/es/webcam/espana/canarias/santa-cruz-de-tenerife/santa-cruz-de-la-palma-la-palma.html
