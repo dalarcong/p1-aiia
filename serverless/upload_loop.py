@@ -30,29 +30,33 @@ def main():
         f"from camera '{camera_id}'"
     )
 
-    while True:
-        cycle_start = time.monotonic()
+    try:
+        while True:
+            cycle_start = time.monotonic()
 
-        try:
-            jpeg = source.capture()
-            captured_at = datetime.now(timezone.utc)
+            try:
+                jpeg = source.capture()
+                captured_at = datetime.now(timezone.utc)
 
-            blob_name = upload_frame(
-                jpeg,
-                camera_id=camera_id,
-                captured_at=captured_at,
-            )
+                blob_name = upload_frame(
+                    jpeg,
+                    camera_id=camera_id,
+                    captured_at=captured_at,
+                )
 
-            print(
-                f"Uploaded {blob_name} "
-                f"({len(jpeg) / 1024:.0f} KB)"
-            )
+                print(
+                    f"Uploaded {blob_name} "
+                    f"({len(jpeg) / 1024:.0f} KB)"
+                )
 
-        except Exception as exc:
-            print(f"[ERROR] {exc}")
+            except Exception as exc:
+                print(f"[ERROR] {exc}")
 
-        elapsed = time.monotonic() - cycle_start
-        time.sleep(max(0.0, interval - elapsed))
+            elapsed = time.monotonic() - cycle_start
+            time.sleep(max(0.0, interval - elapsed))
+
+    except KeyboardInterrupt:
+        print("\nStopped")
 
 
 if __name__ == "__main__":
