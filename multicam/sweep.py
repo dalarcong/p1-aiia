@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 
 from dotenv import load_dotenv
 
-from multicam.launcher import RESULTS_DIR, load_cameras, run_cameras
+from multicam.launcher import RESULTS_DIR, _load_cameras, run_cameras
 
 SWEEP_FIELDS = ["step", "n_cameras", "start", "end", "run_dir"]
 
@@ -53,7 +53,7 @@ def main() -> None:
     interval = args.interval or float(os.getenv("CAPTURE_INTERVAL", "5"))
 
     # Checked before starting, not when the largest step is reached
-    load_cameras(max(args.steps))
+    _load_cameras(max(args.steps))
 
     total_s = len(args.steps) * args.duration + (len(args.steps) - 1) * args.pause
     end_estimate = datetime.now() + timedelta(seconds=total_s)
