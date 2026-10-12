@@ -36,7 +36,7 @@ CSV_FIELDS = [
 ]
 
 
-def _send_frame(
+def send_frame(
     session: requests.Session,
     vm_url: str,
     token: str,
