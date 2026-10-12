@@ -13,7 +13,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from common.capture import CaptureError, capture_frame, resolve_stream_url
+from common.capture import CaptureError, FrameSource
 
 FRAMES_DIR = Path("frames")
 
@@ -24,27 +24,19 @@ def main() -> None:
     interval = float(os.getenv("CAPTURE_INTERVAL", "5"))
     FRAMES_DIR.mkdir(exist_ok=True)
 
-    # Resolved lazily and reset on failure, so an expired token is renewed
-    # on the next iteration without reloading the page on every capture.
-    stream_url = None
+    source = FrameSource(camera_url)
 
     print(f"Capturing every {interval}s (Ctrl+C to stop)")
     try:
         while True:
             start = time.monotonic()
             now = datetime.now()
+            resolutions_before = source.url_resolutions
             try:
-                if stream_url is None:
-                    stream_url = resolve_stream_url(camera_url)
+                jpeg = source.capture()
+                if source.url_resolutions > resolutions_before:
                     print(f"[{now:%H:%M:%S}] [INFO] Stream URL resolved")
-                try:
-                    jpeg = capture_frame(stream_url)
-                except CaptureError:
-                    # The stream token may have expired: renew it and retry once
-                    stream_url = resolve_stream_url(camera_url)
-                    print(f"[{now:%H:%M:%S}] [INFO] Stream URL renewed")
-                    jpeg = capture_frame(stream_url)
-                
+
                 path = FRAMES_DIR / f"{now:%Y%m%d_%H%M%S}.jpg"
                 path.write_bytes(jpeg)
 
@@ -53,7 +45,6 @@ def main() -> None:
                       f"{len(jpeg) / 1024:.0f} KB {elapsed:.2f} s")
             except CaptureError as e:
                 print(f"[{now:%H:%M:%S}] [ERROR]: {e}")
-                stream_url = None
 
             # Sleep only the remaining time, so frames are taken every `interval`
             # seconds regardless of how long the capture took.

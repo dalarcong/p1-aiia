@@ -1,0 +1,16 @@
+metric,unit,mean,median,p95,max
+Latency (round trip),ms,962.3,920.0,1178.4,1719.0
+Inference (YOLO),ms,450.1,444.8,448.7,1016.2
+Rest of request,ms,512.3,473.8,728.1,1244.7
+"Capture (webcam, not VM)",ms,1180.1,946.5,1390.4,21706.9
+CPU busy (VM),%,4.8,0.0,24.0,32.0
+CPU steal,%,0.0,0.0,0.0,0.0
+CPU server process,%,4.6,0.0,23.5,27.5
+RAM available,MiB,190.6,191.0,196.0,198.0
+RAM server process,MiB,439.9,440.0,440.0,443.0
+Swap used,MiB,264.9,265.0,265.0,266.0
+Frame size,KiB,455.8,455.9,463.2,473.2
+Upload bandwidth (frames),KiB/s,89.2,,,
+Frames OK / sent,frames,117/117,,,
+Cost per frame,EUR,0.0000239,,,
+Detection error (MAE / bias),people/frame,1.70 / +0.30,,,

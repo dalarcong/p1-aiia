@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Smart Lighting System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js"></script>
+    <style>
+      :root {
+        --bg: #121211;
+        --surface: #1a1a19;
+        --border: #2c2c2a;
+        --text: #ffffff;
+        --text-secondary: #c3c2b7;
+        --muted: #898781;
+        --good: #0ca30c;
+        --warning: #fab219;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 16px;
+        color: var(--text);
+        background: var(--bg);
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin: 0;
+      }
+      h2 {
+        font-size: 1rem;
+        margin: 0 0 8px;
+      }
+      .subtitle,
+      footer {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .status {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+      }
+      .status::before {
+        content: "●";
+        margin-right: 6px;
+        color: var(--muted);
+      }
+      .status.live::before {
+        color: var(--good);
+      }
+      .status.stale::before {
+        color: var(--warning);
+      }
+      .stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .stat,
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 14px;
+      }
+      .stat span {
+        display: block;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+      .stat strong {
+        font-size: 1.3rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(420px, 100%), 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+      img {
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+      }
+      footer {
+        margin-top: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Smart Lighting System</h1>
+        <div class="subtitle">
+          People counting with YOLOv8 on an Azure virtual machine - Camera:
+          <span id="camera">–</span>
+        </div>
+      </div>
+      <div id="status" class="status">Waiting for data</div>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <span>People now</span><strong id="current">–</strong>
+      </div>
+      <div class="stat">
+        <span>Mean people</span><strong id="mean">–</strong>
+      </div>
+      <div class="stat"><span>Max people</span><strong id="max">–</strong></div>
+      <div class="stat">
+        <span>Frames processed</span><strong id="frames">–</strong>
+      </div>
+      <div class="stat">
+        <span>Mean inference</span><strong id="inference">–</strong>
+      </div>
+      <div class="stat">
+        <span>Mean frame size</span><strong id="size">–</strong>
+      </div>
+      <div class="stat">
+        <span>Last update</span><strong id="updated">–</strong>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>People per frame</h2>
+        <canvas id="timeline"></canvas>
+      </div>
+      <div class="card">
+        <h2>Histogram of people per frame</h2>
+        <canvas id="histogram"></canvas>
+      </div>
+      <div class="card">
+        <h2>Inference time per frame</h2>
+        <canvas id="inference-chart"></canvas>
+      </div>
+      <div class="card">
+        <h2>Latest processed frame</h2>
+        <img
+          id="latest"
+          alt="Latest processed frame with the detected people"
+        />
+      </div>
+    </div>
+
+    <footer>
+      Charts show the last 10 minutes. Statistics and histogram cover the whole
+      run. The page refreshes every 5 seconds.
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>

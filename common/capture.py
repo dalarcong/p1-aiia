@@ -22,6 +22,12 @@ PAGE_TIMEOUT_S = 10
 SKYLINE_STREAM_HOST = "https://hd-auth.skylinewebcams.com/"
 SKYLINE_SOURCE_RE = re.compile(r"source:'(livee\.m3u8\?a=[^']+)'")
 
+# SkylineWebcams returns an empty page to non-browser clients (e.g. Python's
+# default User-Agent), so the page is requested as a regular browser
+USER_AGENT = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+)
 
 class CaptureError(Exception):
     """Raised when a frame cannot be captured from the stream."""
@@ -73,7 +79,7 @@ def resolve_stream_url(url: str) -> str:
     
     SkylineWebcams pages do not expose a stable stream URL: the page HTML
     contains a temporary token, and the stream URL is built from it. This
-    function downloads the page, extracts the token andd returns the full
+    function downloads the page, extracts the token and returns the full
     stream URL.
 
     URLs from other sites are returned unchanged, so direct stream URLs
@@ -92,15 +98,61 @@ def resolve_stream_url(url: str) -> str:
     if urlparse(url).netloc != "www.skylinewebcams.com":
         return url
 
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+
     try:
-        with urllib.request.urlopen(url, timeout=PAGE_TIMEOUT_S) as response:
+        with urllib.request.urlopen(request, timeout=PAGE_TIMEOUT_S) as response:
             html = response.read().decode("utf-8", errors="replace")
     except OSError as e:
         raise CaptureError(f"Could not download the camera page: {e}") from e
 
     match = SKYLINE_SOURCE_RE.search(html)
     if match is None:
-        raise CaptureError("Stream source not found in the camera page")
+        raise CaptureError("Empty camera page (the site may be blocking the request)")
 
     return SKYLINE_STREAM_HOST + match.group(1).replace("livee.", "live.", 1)
 
+
+class FrameSource:
+    """
+    A camera that can be captured repeatedly.
+
+    Combines ``resolve_stream_url`` and ``capture_frame``. Shared by every
+    script that captures in a loop.
+
+    Attributes:
+        camera_url: Camera page URL or direct stream URL.
+        quality: JPEG quality from 0 to 100.
+        url_resolutions: How many times the stream URL has been resolved.
+    """
+
+    def __init__(self, camera_url: str, quality: int = 90) -> None:
+        self.camera_url = camera_url
+        self.quality = quality
+        self.url_resolutions = 0
+        self._stream_url: str | None = None
+
+    def _resolve(self) -> str:
+        self._stream_url = resolve_stream_url(self.camera_url)
+        self.url_resolutions += 1
+        return self._stream_url
+
+    def capture(self) -> bytes:
+        """
+        Capture one frame as JPEG bytes, renewing the stream URL if needed.
+
+        Raises:
+            CaptureError: If the frame cannot be captured even after renewing
+                the stream URL. The URL is then discarded, so the next call
+                starts again by resolving it.
+        """
+        try:
+            stream_url = self._stream_url or self._resolve()
+            try:
+                return capture_frame(stream_url, self.quality)
+            except CaptureError:
+                # The stream token may have expired: renew it and retry once
+                return capture_frame(self._resolve(), self.quality)
+        except CaptureError:
+            self._stream_url = None
+            raise

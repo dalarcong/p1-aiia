@@ -1,0 +1,130 @@
+lun 12 oct 2026 11:51:02 CEST
+Sending one frame every 5.0s to http://20.215.210.144 (Ctrl+C to stop)
+Logging requests in results/vm_client/20261012_115102/requests.csv
+[11:51:02] [INFO] Stream URL resolved
+[11:51:02] people=2 448 KB latency=1719 ms inference=1016 ms
+[11:51:07] people=4 449 KB latency=908 ms inference=472 ms
+[11:51:12] people=4 449 KB latency=929 ms inference=445 ms
+[11:51:17] people=2 436 KB latency=878 ms inference=445 ms
+[11:51:22] people=5 449 KB latency=872 ms inference=445 ms
+[11:51:27] people=7 457 KB latency=1044 ms inference=445 ms
+[11:51:32] people=6 459 KB latency=1671 ms inference=446 ms
+[11:51:37] people=3 453 KB latency=1518 ms inference=444 ms
+[11:51:42] people=4 454 KB latency=1016 ms inference=446 ms
+[11:51:47] people=3 455 KB latency=884 ms inference=446 ms
+[11:51:52] people=3 454 KB latency=1291 ms inference=447 ms
+[11:51:57] people=7 455 KB latency=920 ms inference=449 ms
+[11:52:02] people=6 453 KB latency=1012 ms inference=446 ms
+[11:52:07] people=5 453 KB latency=881 ms inference=448 ms
+[11:52:12] people=2 454 KB latency=860 ms inference=450 ms
+[11:52:17] people=7 456 KB latency=1103 ms inference=446 ms
+[11:52:22] people=5 456 KB latency=953 ms inference=449 ms
+[11:52:27] people=5 455 KB latency=1691 ms inference=446 ms
+[11:52:32] people=5 455 KB latency=932 ms inference=445 ms
+[11:52:37] people=6 455 KB latency=994 ms inference=444 ms
+[11:52:42] people=6 455 KB latency=876 ms inference=449 ms
+[11:52:47] people=4 456 KB latency=1058 ms inference=448 ms
+[11:52:52] people=6 458 KB latency=853 ms inference=447 ms
+[11:52:57] people=7 457 KB latency=947 ms inference=447 ms
+[11:53:02] people=5 456 KB latency=972 ms inference=445 ms
+[11:53:07] people=3 455 KB latency=957 ms inference=446 ms
+[11:53:12] people=7 454 KB latency=880 ms inference=447 ms
+[11:53:17] people=4 453 KB latency=865 ms inference=446 ms
+[11:53:22] people=7 438 KB latency=1032 ms inference=444 ms
+[11:53:27] people=7 454 KB latency=907 ms inference=446 ms
+[11:53:32] people=8 455 KB latency=848 ms inference=444 ms
+[11:53:37] people=10 456 KB latency=863 ms inference=445 ms
+[11:53:42] people=7 459 KB latency=846 ms inference=446 ms
+[11:53:47] people=10 462 KB latency=954 ms inference=446 ms
+[11:53:52] people=10 459 KB latency=934 ms inference=445 ms
+[11:53:57] people=15 459 KB latency=928 ms inference=445 ms
+[ WARN:0@195.870] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 15845.872008 ms
+[ WARN:0@195.870] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 15846.036262 ms
+[ WARN:0@195.870] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 15846.109793 ms
+[ WARN:0@195.870] global cap_ffmpeg_impl.hpp:453 _opencv_ffmpeg_interrupt_callback Stream timeout triggered after 15846.306384 ms
+[ WARN:0@195.871] global cap.cpp:212 open VIDEOIO(FFMPEG): backend is generally available but can't be used to capture by name
+[11:54:02] [INFO] Stream URL resolved
+[11:54:02] people=8 452 KB latency=1160 ms inference=446 ms
+[11:54:25] people=8 453 KB latency=1122 ms inference=447 ms
+[11:54:30] people=11 453 KB latency=907 ms inference=444 ms
+[11:54:35] people=11 452 KB latency=874 ms inference=444 ms
+[11:54:40] people=8 463 KB latency=872 ms inference=445 ms
+[11:54:45] people=6 456 KB latency=1173 ms inference=444 ms
+[11:54:50] people=6 449 KB latency=846 ms inference=445 ms
+[11:54:55] people=6 456 KB latency=861 ms inference=446 ms
+[11:55:00] people=10 452 KB latency=868 ms inference=454 ms
+[11:55:05] people=5 448 KB latency=1149 ms inference=446 ms
+[11:55:10] people=8 450 KB latency=1122 ms inference=445 ms
+[11:55:15] people=10 449 KB latency=1135 ms inference=446 ms
+[11:55:20] people=12 454 KB latency=978 ms inference=444 ms
+[11:55:25] people=8 455 KB latency=911 ms inference=446 ms
+[11:55:30] people=6 455 KB latency=979 ms inference=444 ms
+[11:55:35] people=4 432 KB latency=939 ms inference=444 ms
+[11:55:40] people=2 461 KB latency=972 ms inference=444 ms
+[11:55:45] people=6 461 KB latency=940 ms inference=445 ms
+[11:55:50] people=7 461 KB latency=866 ms inference=443 ms
+[11:55:55] people=12 461 KB latency=1024 ms inference=444 ms
+[11:56:00] people=11 459 KB latency=933 ms inference=443 ms
+[11:56:05] people=8 460 KB latency=1071 ms inference=443 ms
+[11:56:10] people=6 456 KB latency=842 ms inference=445 ms
+[11:56:15] people=9 458 KB latency=848 ms inference=444 ms
+[11:56:20] people=14 461 KB latency=926 ms inference=443 ms
+[11:56:25] people=9 458 KB latency=850 ms inference=443 ms
+[11:56:30] people=8 461 KB latency=927 ms inference=445 ms
+[11:56:35] people=10 439 KB latency=837 ms inference=445 ms
+[11:56:40] people=10 462 KB latency=908 ms inference=443 ms
+[11:56:45] people=8 459 KB latency=1034 ms inference=445 ms
+[11:56:50] people=7 456 KB latency=849 ms inference=443 ms
+[11:56:55] people=6 457 KB latency=1077 ms inference=443 ms
+[11:57:00] people=5 456 KB latency=915 ms inference=444 ms
+[11:57:05] people=5 457 KB latency=1001 ms inference=444 ms
+[11:57:10] people=8 459 KB latency=842 ms inference=443 ms
+[11:57:15] people=5 455 KB latency=964 ms inference=444 ms
+[11:57:20] people=5 455 KB latency=995 ms inference=442 ms
+[11:57:25] people=6 455 KB latency=870 ms inference=444 ms
+[11:57:30] people=7 455 KB latency=870 ms inference=447 ms
+[11:57:35] people=6 447 KB latency=1178 ms inference=443 ms
+[11:57:40] people=11 462 KB latency=958 ms inference=447 ms
+[11:57:45] people=12 468 KB latency=847 ms inference=445 ms
+[11:57:50] people=11 463 KB latency=903 ms inference=445 ms
+[11:57:55] people=7 459 KB latency=855 ms inference=443 ms
+[11:58:00] people=5 461 KB latency=938 ms inference=445 ms
+[11:58:05] people=5 464 KB latency=998 ms inference=444 ms
+[11:58:10] people=10 442 KB latency=890 ms inference=444 ms
+[11:58:15] people=11 459 KB latency=862 ms inference=443 ms
+[11:58:20] people=6 458 KB latency=894 ms inference=444 ms
+[11:58:25] people=12 458 KB latency=963 ms inference=444 ms
+[11:58:30] people=6 456 KB latency=1321 ms inference=443 ms
+[11:58:35] people=7 455 KB latency=893 ms inference=445 ms
+[11:58:40] people=7 458 KB latency=1001 ms inference=444 ms
+[11:58:45] people=8 449 KB latency=859 ms inference=445 ms
+[11:58:50] people=5 463 KB latency=842 ms inference=443 ms
+[11:58:55] people=7 472 KB latency=877 ms inference=445 ms
+[11:59:00] people=7 459 KB latency=856 ms inference=444 ms
+[11:59:05] people=9 456 KB latency=844 ms inference=443 ms
+[11:59:10] people=6 459 KB latency=979 ms inference=444 ms
+[11:59:15] people=7 460 KB latency=1034 ms inference=444 ms
+[11:59:20] people=3 458 KB latency=844 ms inference=443 ms
+[11:59:25] people=3 460 KB latency=918 ms inference=444 ms
+[11:59:30] people=6 459 KB latency=958 ms inference=444 ms
+[11:59:35] people=3 458 KB latency=972 ms inference=443 ms
+[11:59:40] people=6 458 KB latency=924 ms inference=447 ms
+[11:59:45] people=3 459 KB latency=960 ms inference=446 ms
+[11:59:50] people=8 462 KB latency=854 ms inference=444 ms
+[11:59:55] people=8 462 KB latency=849 ms inference=444 ms
+[12:00:00] people=7 462 KB latency=907 ms inference=444 ms
+[12:00:05] people=8 466 KB latency=939 ms inference=444 ms
+[12:00:10] people=10 462 KB latency=952 ms inference=447 ms
+[12:00:15] people=10 473 KB latency=846 ms inference=444 ms
+[12:00:20] people=14 446 KB latency=848 ms inference=445 ms
+[12:00:25] people=11 463 KB latency=931 ms inference=445 ms
+[12:00:30] people=4 447 KB latency=870 ms inference=443 ms
+[12:00:35] people=8 457 KB latency=874 ms inference=445 ms
+[12:00:40] people=6 463 KB latency=896 ms inference=444 ms
+[12:00:45] people=8 441 KB latency=834 ms inference=444 ms
+[12:00:50] people=8 455 KB latency=832 ms inference=444 ms
+[12:00:55] people=7 452 KB latency=882 ms inference=446 ms
+[12:01:00] people=6 452 KB latency=852 ms inference=446 ms
+
+Stopped
+lun 12 oct 2026 12:01:02 CEST
