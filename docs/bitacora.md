@@ -296,8 +296,42 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.
 
-## 12/10/2026 - 2.5 Eficacia de la detección en la VM
+## 12/10/2026 - 2.5 Métricas de la VM (en curso)
+
+### Eficacia
 
 - **Método** (`vm/eval_effectiveness.py`): Los 30 frames de referencia se envían a la VM con el mismo contrato del cliente. Las cajas devueltas se filtran con la misma zona excluida usada en el conteo manual y se comparan con `calibration/ground_truth.csv`.
 
 - **Resultado:** MAE 1.70 personas/frame, sesgo +0.30, 5/30 conteos exactos. Inferencia media en la VM: 497 ms (frente a 123 ms en el portátil).
+
+### Prueba de rendimiento
+
+- **Condiciones:** 12/10/2026, de 11:51:02 a 12:01:02 (CEST). Cámara de Grazalema, de día. Una cámara, un frame cada 5 s. `yolov8s`, imgsz 960, conf 0.25. VM B2ats_v2 con swap de 2 GB y la web activa. Cliente en el portátil.
+
+- **Datos:** `docs/results/2_5_vm`. EL monitor de la VM se lanzó un minuto antes y se paró un minuto después.
+
+- **Frames:** 117 de 120, todos correctos. Los 3 que faltan se deben a una captura de SkylineWebcams que tardó 21,7 s.
+
+- **Tiempo de respuesta** (mediana / p95): latencia 920 / 1178 ms; inferencia 445 / 449 ms; resto (red, Apache y publicación web) 474 / 728 ms.
+
+- **CPU:** Media 4%, máximo 32%. Steal 0% durante toda la prueba: sin limitación por créditos. Con una cámara la carga está muy por debajo del 20% base.
+
+- **Memoria:** Unos 190 MB disponibles y 265 MB en el swap, estables. Iowait ~0 %. El servidor ocupa 407-443 MB.
+
+- **Ancho de banda:** 456 KB por frame (1080p, calidad 90,), unos 91 KB/s durante la prueba.
+
+### Problema
+
+- Las columnas de red de `vm_monitor.csv` (`net_recv_kbps`, `net_sent_kbps`) **cuentan cada frame dos veces**: el monitor sumaba también la interfaz interna (`lo`), por la que Apache reenvía cada frame a FastAPI. No usar esas columnas en esta prueba; se corrige el monitor para las siguientes.
+
+### Pendiente (Laura, en el portal de Azure)
+
+- **Azure Monitor**, ventana de **11:46 a 12:06 (CEST)**, granularidad de 1 minuto:
+  - _Percentage CPU_ (Avg y Max).
+  - _CPU Credits Remaining_ y _CPU Credits Consumed_.
+  - _Available Memory Bytes_ (Min).
+  - _Network In Total_ y _Network Out Total_ (Sum): ancho de banda externo real.
+  - _Disk Read Bytes_ (Sum).
+- **Resumen de la VM** y **precio por hora** de la B2ats_v2, para el cálculo de coste.
+- **Cost Management** (_Cost analysis_), a partir del día siguiente, filtrado por el grupo de recursos.
+- Capturas en `docs/screenshots/` con el formato `2_5_azure_<métrica>.png`, y, si el portal lo permite, exportación a CSV.

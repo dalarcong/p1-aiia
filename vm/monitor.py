@@ -47,6 +47,18 @@ def _find_server() -> psutil.Process | None:
     return None
 
 
+def _external_traffic() -> tuple[int, int]:
+    """
+    Return the bytes received and sent by the VM, excluding the loopback.
+
+    Apache forwards every frame to FastAPI through 127.0.0.1, so counting the
+    loopback interface (lo) would add each frame to the traffic twice.
+    """
+    counters = psutil.net_io_counters(pernic=True)
+    external = [nic for name, nic in counters.items() if name != "lo"]
+    return sum(nic.bytes_recv for nic in external), sum(nic.bytes_sent for nic in external)
+
+
 def main() -> None:
     load_dotenv()
     interval = float(os.getenv("MONITOR_INTERVAL", "1"))
@@ -62,7 +74,7 @@ def main() -> None:
     # CPU and network values are differences between consecutive samples,
     # so the first readings only set the starting point
     psutil.cpu_times_percent(None)
-    net_before = psutil.net_io_counters()
+    recv_before, sent_before = _external_traffic()
     time_before = time.monotonic()
 
     print(f"Monitoring every {interval}s into {csv_path} (Ctrl+C to stop)")
@@ -80,7 +92,7 @@ def main() -> None:
                 cpu = psutil.cpu_times_percent(None)
                 memory = psutil.virtual_memory()
                 swap = psutil.swap_memory()
-                net = psutil.net_io_counters()
+                recv, sent = _external_traffic()
                 now = time.monotonic()
                 elapsed = now - time_before
 
@@ -97,8 +109,8 @@ def main() -> None:
                     "mem_used_mb": round((memory.total - memory.available) / MB),
                     "mem_available_mb": round(memory.available / MB),
                     "swap_used_mb": round(swap.used / MB),
-                    "net_recv_kbps": round((net.bytes_recv - net_before.bytes_recv) / 1024 / elapsed, 1),
-                    "net_sent_kbps": round((net.bytes_sent - net_before.bytes_sent) / 1024 / elapsed, 1),
+                    "net_recv_kbps": round((recv - recv_before) / 1024 / elapsed, 1),
+                    "net_sent_kbps": round((sent - sent_before) / 1024 / elapsed, 1),
                 }
 
                 if server is None:
@@ -116,7 +128,7 @@ def main() -> None:
 
                 writer.writerow(row)
                 handle.flush()
-                net_before, time_before = net, now
+                recv_before, sent_before, time_before = recv, sent, now
         except KeyboardInterrupt:
             print("\nStopped")
 
