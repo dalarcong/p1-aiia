@@ -48,8 +48,10 @@ La documentación de Azure del profesorado está en `docs/azure/`:
   - 3.6 Métricas: eficacia, coste, tiempo de respuesta.
 - **Parte 4 – Multicámara**
   - 4.1 Lanzador de N cámaras a 1 frame / 5 s por cámara.
-  - 4.2 Límite de cámaras de la VM.
-  - 4.3 Límite de cámaras en serverless.
+  - 4.2 Límite de cámaras de la VM. **Resultado: 10 cámaras** (11 teórico: inferencia en serie de ~0,45 s →
+    ~2,2 frames/s). Con 12 colapsa: se agota la RAM, entra el swap, la inferencia sube a ~1,5 s y se procesan
+    ~0,7 frames/s. Sin créditos de CPU el límite sostenido sería ~4 cámaras (estimado).
+  - 4.3 Límite de cámaras en serverless (pendiente de la Parte 3): reutilizar `multicam/` y comparar con la 4.2.
 - **Avanzado (+2)**
   - Contar personas únicas mediante tracking (`model.track()`).
   - Contar también vehículos.
@@ -122,6 +124,18 @@ common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, scre
   ocupando al menos un 5–10 % del alto de la imagen.
 - Fuentes sugeridas por el enunciado: EarthCam, SkylineWebcams y WebcamTaxi.
 - Cámara principal: Grazalema (SkylineWebcams). Tenerife (Los Cristianos) reservada para la Parte 4.
-- Parte 4: cámaras en `multicam/cameras.txt` (`<id> <url>`), lanzador `multicam/launcher.py` y barrido
-  `multicam/sweep.py`. La captura en directo desde un solo portátil se satura en ~1 frame/s en total
-  (~4–5 cámaras a 1 frame/5 s): para medir el límite de la VM se usan frames grabados (modo replay).
+- Parte 4: 15 cámaras en `multicam/cameras.txt` (`<id> <url>`; Rimini retirada porque siempre falla).
+  La captura en directo desde un solo portátil se satura en ~1 frame/s en total (~4–5 cámaras a 1 frame/5 s),
+  así que el límite se mide con frames grabados (modo replay), justificado porque la inferencia no depende
+  del contenido.
+- Flujo de la Parte 4:
+  1. `python -m multicam.record --frames 12 --out replay_frames` (graba de una en una; `replay_frames/` ignorado).
+  2. `python -m multicam.sweep --replay replay_frames --steps 1 2 4 6 8 10 12 15 --duration 300 --pause 60`
+     (cada escalón usa `multicam/launcher.py`: un hilo por cámara, arranque escalonado `i × 5/N` s, un CSV).
+     En la VM, servidor recién reiniciado y `vm.monitor` durante todo el barrido.
+  3. Copiar a `docs/results/<prueba>/`: `sweep.csv`, `client_requests_<N>cams.csv`, `server_detections.csv`
+     y `vm_monitor.csv` (en la VM las carpetas de `results/` van en hora UTC).
+  4. `python -m multicam.analyze_sweep docs/results/<prueba> --price-per-hour 0.0168`.
+- Pruebas de la Parte 2: `vm/eval_effectiveness.py` (eficacia con los 30 frames de referencia),
+  `vm/monitor.py` (excluye la interfaz `lo`; antes contaba doble el tráfico) y `vm/analyze_run.py`.
+- Hacer todos los escalones de una comparación en la misma sesión: la latencia de red varía con la hora.

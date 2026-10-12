@@ -354,19 +354,19 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Pruebas:** En local con el servidor de prueba (3 cámaras, escalonado y periodo correctos) y contra la VM con 2 cámaras durante 60 s: 25/25 frames correctos, inferencia mediana de 444 ms y latencia mediana de 1438 ms.
 
-## 12/10/2026 - 4.2 Barrido con captura en directo (en curso)
+## 12/10/2026 - 4.2 Barrido con captura en directo
 
 - **Prueba:** `multicam/sweep.py` con cámaras reales capturadas en directo desde el portátil: escalones de 2, 4, 6 y 8 cámaras de 60 s (19:00–19:05 CEST) y una prueba previa con 16 cámaras (~45 s). Datos en `docs/results/4_2_live_capture/`.
 
 - **Resultados** (por escalón: frames procesados / esperados; captura mediana y p95; latencia mediana en la VM; periodo real por cámara):
 
-  | Cámaras | Frames | Captura (med / p95) | Latencia VM (med) | Periodo por cámara |
-  |---|---|---|---|---|
-  | 2 | 25 / 26 | 1,0 / 1,2 s | 934 ms | 5 s |
-  | 4 | 48 / 51 | 1,0 / 1,2 s | 873 ms | 5 s |
-  | 6 | 61 / 76 | 4,2 / 7,1 s | 889 ms | 5 s (frames perdidos) |
-  | 8 | 65 / 102 | 6,5 / 10,3 s | 948 ms | 7 s |
-  | 16 | 41 / 109 | 13,0 / 17,3 s | 1025 ms | 12 s |
+  | Cámaras | Frames   | Captura (med / p95) | Latencia VM (med) | Periodo por cámara    |
+  | ------- | -------- | ------------------- | ----------------- | --------------------- |
+  | 2       | 25 / 26  | 1,0 / 1,2 s         | 934 ms            | 5 s                   |
+  | 4       | 48 / 51  | 1,0 / 1,2 s         | 873 ms            | 5 s                   |
+  | 6       | 61 / 76  | 4,2 / 7,1 s         | 889 ms            | 5 s (frames perdidos) |
+  | 8       | 65 / 102 | 6,5 / 10,3 s        | 948 ms            | 7 s                   |
+  | 16      | 41 / 109 | 13,0 / 17,3 s       | 1025 ms           | 12 s                  |
 
 - **Conclusión: el cuello de botella es la captura, no la VM.** Cada captura abre el stream HLS de la cámara, descarga un fragmento de vídeo 1080p y lo decodifica para quedarse con un frame. Desde un solo portátil, el total se estanca en ~1 frame/s (0,97; 1,02 y 1,21 frames/s con 6, 8 y 16 cámaras), es decir, unas **4–5 cámaras** a un frame cada 5 s. Por encima, la captura tarda más de 5 s y cada cámara envía menos frames de los que debería.
 
@@ -375,3 +375,32 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Decisión:** la captura en directo se usa para la 4.1 y para mostrar este límite del lado del cliente. Para encontrar el límite de la VM (4.2) se reenvían **frames reales grabados** de esas mismas cámaras (modo replay), que eliminan el coste de captura. Se justifica porque la carga de la VM depende del número y tamaño de los frames, no de su contenido (la inferencia es casi constante). En un despliegue real cada cámara capturaría su propia imagen y este cuello de botella no existiría.
 
 - **Incidencia:** la cámara de Rimini falla siempre al capturar (`capture_error`) y se retira de `multicam/cameras.txt` (quedan 15).
+
+## 12/10/2026 - 4.2 Límite de cámaras de la VM
+
+- **Condiciiones:** Modo replay (12 frames reales grabados por cámara, `multicam/record.py`), 1 frame cada 5 s por cámara, escalones de 1, 2, 4, 6, 8, 10 y 12 cámaras de 5 min con 1 min de pausa (`multicam/sweep.py`). Servidor recién iniciado, `yolov8s` 960/0.25 y swap de 2 GB. Monitor de la VM durante todo el barrido. Datos en `docs/results/4_2_vm_sweep`. Análisis con `multicam/analyze_sweep.py`.
+
+- **Resultados:**
+
+  | Cámaras | Frames (OK / esperados) | Latencia (med / p95) | Inferencia | CPU    | iowait | RAM libre (mín) | Swap (máx) |
+  | ------- | ----------------------- | -------------------- | ---------- | ------ | ------ | --------------- | ---------- |
+  | 1       | 60 / 60                 | 944 / 1458 ms        | 446 ms     | 4,9 %  | 0,8 %  | 97 MiB          | 415 MiB    |
+  | 4       | 240 / 240               | 906 / 1275 ms        | 442 ms     | 18,8 % | 0,1 %  | 150 MiB         | 357 MiB    |
+  | 8       | 480 / 480               | 874 / 1005 ms        | 448 ms     | 38,5 % | 0,1 %  | 89 MiB          | 355 MiB    |
+  | 10      | 600 / 600               | 873 / 1069 ms        | 453 ms     | 48,6 % | 0,1 %  | 55 MiB          | 352 MiB    |
+  | 12      | 222 / 720               | 18,0 / 20,5 s        | 1427 ms    | 23,5 % | 42,8 % | 5 MiB           | 947 MiB    |
+  | 15      | 184 / 900 (16 timeouts) | 23,7 / 28,6 s        | 1594 ms    | 20,8 % | 47,5 % | 6 MiB           | 1026 MiB   |
+
+  Steal = 0 % en todo el barrido: no se agotaron los créditos de CPU.
+
+- **Hasta 10 cámaras la VM escala linealmente:** Procesa todos los frames, la latencia (~0,9 s) y la inferencia (~445 ms) no cambian, y la CPU (~4,9 puntos por cámara) y la red (~75 KiB/s por cámara) crecen en proporción.
+
+- **Límite: 10 cámaras** (11 en teoría). Las inferencias van en serie (Lock) y tardan ~0.45 s, así que la VM procesa como máximo ~2,2 frames/s, es decir, ~11 cámaras a 1 frame/5 s. Con 12 llegan 2,4 frames/s, más de los que puede procesar.
+
+- **Por encima del límite el sistema colapsa, no se degrada gradualmente:** se acumulan peticiones en espera, la RAM se agota (5 MiB libres), el sistema pasa a usar el swap (~350 → ~950 MiB) y la CPU pasa el ~45 % del tiempo esperando al disco. La inferencia sube de 0,45 a ~1,5 s y la capacidad cae a ~0,7 frames/s (menos que con 4 cámaras). La CPU útil baja del 49 % al 23 % aunque haya más trabajo. La CPU fija el límite; la RAM (1 GB) hace que superarlo sea un colapso.
+
+- **La latencia se estabiliza en ~N × inferencia** (12 × 1,43 ≈ 17 s; 15 × 1,59 ≈ 24 s) porque cada cámara espera la respuesta antes de enviar el siguiente frame: nunca hay más de N peticiones en cola. Con 15 cámaras, algunas superan el timeout de 30 s del cliente.
+
+- **Coste por frame:** baja de ~23 × 10⁻⁶ € (1 cámara) a ~2,3 × 10⁻⁶ € (10 cámaras), porque la VM cuesta lo mismo por hora. Por encima del límite vuelve a subir, porque se procesan menos frames.
+
+- **Pendiente (Laura):** Azure Monitor de 19:42 a 20:32 (CEST): _Percentage CPU_, _CPU Credits Remaining/Consumed_, _Available Memory Bytes_, _Network In Total_.
