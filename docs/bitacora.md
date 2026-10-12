@@ -340,3 +340,16 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
   - _Disk Read Bytes_ (Sum).
 - **Cost Management** (_Cost analysis_), a partir del día siguiente, filtrado por el grupo de recursos.
 - Capturas en `docs/screenshots/` con el formato `2_5_azure_<métrica>.png`, y, si el portal lo permite, exportación a CSV.
+
+## 12/10/2026 - 4.1 Lanzador multicámara
+
+- **Cámaras:** 8 cámaras reales de SkylineWebcams en `multicam/cameras.txt` (`<camera_id> <url de la página>`, una por línea). Todas a 1920x1080. El tamaño del frame varías según la escena, así que el ancho de banda no crece exactamente en proporción al número de cámaras.
+
+- **Lanzador** (`multicam/launcher.py --cameras N --duration S`): Un hilo por cámara, cada uno con su `FrameSource` y su conexión, que envía un frame cada 5 s con el mismo contrato y el mismo formato de CSV que el cliente de la Parte 2 (reutiliza `send_frame` y `CSV_FIELDS`). Usa las N primeras cámaras de la lista, de modo que cada escalón añade cámaras sin cambiar las anteriores.
+
+- **Decisiones de diseño:**
+  - **Arranque escalonado:** La cámara _i_ empieza `i x 5/N` s después, para que los frames lleguen repartidos dentro del intervalo, como en cámaras independientes, y no en ráfagas.
+  - **Un único CSV** (`results/multicam/<fecha>_<N>cams/requests.csv`), protegido con un Lock porque escriben varios hilos.
+  - **Parada limpia:** Al cumplirse la duración o con Ctrl+C, cada hilo termina su petición en curso antes de cerrar el CSV.
+
+- **Pruebas:** En local con el servidor de prueba (3 cámaras, escalonado y periodo correctos) y contra la VM con 2 cámaras durante 60 s: 25/25 frames correctos, inferencia mediana de 444 ms y latencia mediana de 1438 ms.
