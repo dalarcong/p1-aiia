@@ -56,7 +56,7 @@ def _arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def _load_cameras(n: int) -> list[tuple[str, str]]:
+def load_cameras(n: int) -> list[tuple[str, str]]:
     """Return the first n (camera_id, page_url) pairs of the cameras file."""
     lines = [
         line.split()
@@ -139,13 +139,21 @@ def _camera_loop(
         stop.wait(max(0.0, interval - (time.monotonic() - start)))
 
 
-def main() -> None:
-    args = _arguments()
-    load_dotenv()
-    vm_url = os.environ["VM_URL"].rstrip("/")
-    token = os.environ["VM_TOKEN"]
-    interval = args.interval or float(os.getenv("CAPTURE_INTERVAL", "5"))
-    cameras = _load_cameras(args.cameras)
+def run_cameras(
+    n_cameras: int,
+    duration: float | None,
+    interval: float,
+    vm_url: str,
+    token: str,
+) -> tuple[Path, bool]:
+    """
+    Send frames from the first n_cameras cameras for `duration` seconds.
+
+    With duration None, run until Ctrl+C. Returns the run folder and whether
+    the run was interrupted with Ctrl+C, so a caller such as the sweep can
+    stop too.
+    """
+    cameras = load_cameras(n_cameras)
 
     run_dir = RESULTS_DIR / f"{datetime.now():%Y%m%d_%H%M%S}_{len(cameras)}cams"
     run_dir.mkdir(parents=True)
@@ -166,14 +174,15 @@ def main() -> None:
     for thread in threads:
         thread.start()
 
+    interrupted = False
     try:
-        if args.duration is None:
+        if duration is None:
             while True:
                 time.sleep(1)
         else:
-            time.sleep(args.duration)
+            time.sleep(duration)
     except KeyboardInterrupt:
-        pass
+        interrupted = True
     finally:
         # Each thread finishes its current request before stopping
         print("\nStopping...")
@@ -183,6 +192,16 @@ def main() -> None:
         log.close()
 
     print(f"Results written to {run_dir / 'requests.csv'}")
+    return run_dir, interrupted
+
+
+def main() -> None:
+    args = _arguments()
+    load_dotenv()
+    vm_url = os.environ["VM_URL"].rstrip("/")
+    token = os.environ["VM_TOKEN"]
+    interval = args.interval or float(os.getenv("CAPTURE_INTERVAL", "5"))
+    run_cameras(args.cameras, args.duration, interval, vm_url, token)
 
 
 if __name__ == "__main__":
