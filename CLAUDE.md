@@ -75,7 +75,7 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 ## Estructura del repo
 
 ```
-common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, screenshots/, Practice1.pdf, ejemplo/, azure/)
+common/  local/  vm/  serverless/  multicam/  advanced/  results/  docs/ (bitacora.md, screenshots/, Practice1.pdf, ejemplo/, azure/)
 .env.example  .gitignore  README.md
 ```
 

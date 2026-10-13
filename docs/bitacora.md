@@ -404,3 +404,28 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Coste por frame:** baja de ~23 × 10⁻⁶ € (1 cámara) a ~2,3 × 10⁻⁶ € (10 cámaras), porque la VM cuesta lo mismo por hora. Por encima del límite vuelve a subir, porque se procesan menos frames.
 
 - **Pendiente (Laura):** Azure Monitor de 19:42 a 20:32 (CEST): _Percentage CPU_, _CPU Credits Remaining/Consumed_, _Available Memory Bytes_, _Network In Total_.
+
+## 13/10/2026 - Avanzado 3 Resolución mínima y compresión
+
+- **Prueba:** `advanced/eval_compression.py` recodifica los 30 frames de referencia (1080p) a varios anchos (1920–480 px, `cv2.INTER_AREA`) y calidades JPEG (100–30), cuenta personas con la configuración de producción (`yolov8s` 960/0.25) y compara con la verdad manual. Las cajas se reescalan a 1080p antes de aplicar la zona de exclusión. Todo en local: con `imgsz` fijo, el tamaño enviado no cambia la inferencia, solo el ancho de banda y el detalle que llega al modelo. Datos en `docs/results/adv_compression/` (`summary.csv`, `compression.png`).
+
+- **Resultados** (selección; con 30 frames, diferencias de MAE de ±0,3 son ruido):
+
+  | Ancho / calidad    | KiB por frame | MAE  | Sesgo |
+  | ------------------ | ------------- | ---- | ----- |
+  | 1920 / 90 (actual) | 481           | 1,70 | +0,30 |
+  | 960 / 100          | 403           | 1,60 | +0,27 |
+  | **960 / 90**       | **159**       | 1,80 | −0,40 |
+  | 960 / 75           | 93            | 2,10 | −1,30 |
+  | 960 / 45           | 58            | 3,30 | −2,77 |
+  | 720 / 100          | 243           | 2,00 | −0,20 |
+  | 640 / 90           | 77            | 2,40 | −1,60 |
+  | 1920 / 30          | 151           | 1,67 | −0,40 |
+
+- **Resolución mínima: 960 px, igual que `imgsz`.** Sin compresión (q100), 960 px da la misma eficacia que 1920, porque YOLO reduce la imagen a 960 de todas formas. Por debajo, el sesgo se vuelve negativo incluso con q100: se pierden personas pequeñas.
+
+- **La compresión depende de la resolución:** a 1920 px la calidad apenas importa (MAE 1,4–1,8 hasta q30), porque al reducir la imagen YOLO promedia los artefactos del JPEG. A 960 px los ve directamente y la eficacia cae rápido por debajo de q90.
+
+- **Decisión: 960 px / q90.** Reduce el frame **~3 veces** (481 → 159 KiB) sin pérdida medible de eficacia. 1920/q30 ocupa lo mismo con la misma eficacia. Se elige 960 porque la VM descodifica y anota una imagen 4 veces más pequeña.
+
+- **Tiempo de inferencia:** prácticamente igual en todas las combinaciones (~100–120 ms en local. Varía ±10 ms sin relación con el tamaño). El ahorro está en la red, no en el cómputo.
