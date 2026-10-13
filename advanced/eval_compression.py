@@ -21,13 +21,12 @@ import statistics
 import time
 from pathlib import Path
 
-import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from dotenv import load_dotenv
 
 from common.count_people import count_people
-from common.image import decode_jpeg, encode_jpeg
+from common.image import decode_jpeg, encode_jpeg, resize_to_width
 from common.zones import is_excluded, load_exclude_zone
 
 FRAMES_DIR = Path("calibration/frames")
@@ -42,22 +41,6 @@ WIDTHS = [1920, 1280, 960, 720, 640, 480]
 QUALITIES = [100, 90, 75, 60, 45, 30]
 
 FIELDS = ["width", "quality", "kib_mean", "mae", "bias", "exact", "time_ms"]
-
-
-def _resize(frame: np.ndarray, width: int) -> np.ndarray:
-    """
-    Resize a frame to the given width, keeping its aspect ratio.
-
-    INTER_AREA is the recommended OpenCV interpolation for shrinking:
-    it averages neighbouring pixels instead of skipping them.
-    Frames are never enlarged.
-    """
-    height, original_width = frame.shape[:2]
-    if width >= original_width:
-        return frame
-
-    new_height = round(height * width / original_width)
-    return cv2.resize(frame, (width, new_height), interpolation=cv2.INTER_AREA)
 
 
 def _count_outside_zone(boxes: list[dict], scale: float, zone) -> int:
@@ -91,7 +74,7 @@ def _evaluate(
     times = []
 
     for frame, n_real in frames:
-        small = _resize(frame, width)
+        small = resize_to_width(frame, width)
         jpeg = encode_jpeg(small, quality)
         # len(jpeg) is exactly what would be sent over the network
         sizes.append(len(jpeg))

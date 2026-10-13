@@ -74,18 +74,25 @@ def main() -> None:
     vm_url = os.environ["VM_URL"].rstrip("/")
     token = os.environ["VM_TOKEN"]
     camera_id = os.getenv("CAMERA_ID", "camera")
+    # Frame reduction before sending. By default the original
+    # resolution is kept.
+    quality = int(os.getenv("CLIENT_JPEG_QUALITY", "90"))
+    max_width_text = os.getenv("CLIENT_MAX_WIDTH", "").strip()
+    max_width = int(max_width_text) if max_width_text else None
+    
 
     run_dir = RESULTS_DIR / datetime.now().strftime("%Y%m%d_%H%M%S")
     run_dir.mkdir(parents=True)
     csv_path = run_dir / "requests.csv"
 
-    source = FrameSource(camera_url)
+    source = FrameSource(camera_url, quality, max_width)
 
     # One session for the whole run. The connection to the VM is reused,
     # so latency_ms does not include a new TCP handshake on every frame.
     session = requests.Session()
 
     print(f"Sending one frame every {interval}s to {vm_url} (Ctrl+C to stop)")
+    print(f"Frames: max width {max_width or 'original'}, JPEG quality {quality}")
     print(f"Logging requests in {csv_path}")
 
     with csv_path.open("w", newline="", encoding="utf-8") as handle:

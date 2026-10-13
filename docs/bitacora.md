@@ -429,3 +429,21 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Decisión: 960 px / q90.** Reduce el frame **~3 veces** (481 → 159 KiB) sin pérdida medible de eficacia. 1920/q30 ocupa lo mismo con la misma eficacia. Se elige 960 porque la VM descodifica y anota una imagen 4 veces más pequeña.
 
 - **Tiempo de inferencia:** prácticamente igual en todas las combinaciones (~100–120 ms en local. Varía ±10 ms sin relación con el tamaño). El ahorro está en la red, no en el cómputo.
+
+## 13/10/2026 - Avanzado 3 Compresión en el cliente: prueba con la VM
+
+- **Implementación:** `capture_frame` y `FrameSource` aceptan `max_width` (opcional): el frame se reduce antes de codificarlo, así que se comprime una sola vez. `vm_client` lo lee de `CLIENT_MAX_WIDTH` y `CLIENT_JPEG_QUALITY` (vacío = tamaño original).
+
+- **Prueba:** Grazalema, dos tandas seguidas de 10 min, 1920/q90 y 960/q90, con `vm.monitor` en la VM. Datos en `docs/results/adv_compression_vm/`, análisis con `vm/analyze_run.py`.
+
+- **Resultados** (medianas):
+
+  | Métrica                         | 1920 / q90 | 960 / q90 |
+  | ------------------------------- | ---------- | --------- |
+  | Tamaño del frame                | 262 KiB    | 92 KiB    |
+  | Red de entrada en la VM (media) | 50 KiB/s   | 20 KiB/s  |
+  | Latencia (ida y vuelta)         | 1069 ms    | 852 ms    |
+  | Latencia sin inferencia         | 623 ms     | 418 ms    |
+  | Inferencia                      | 440 ms     | 434 ms    |
+
+- **Conclusión:** El frame ocupa 2,8 veces menos y la latencia baja ~200 ms, todo en la parte de red: son ~173 KB menos de subida por frame. La inferencia y la CPU de la VM no cambian, así que el límite de cámaras de la 4.2 sigue igual. El coste no varía.

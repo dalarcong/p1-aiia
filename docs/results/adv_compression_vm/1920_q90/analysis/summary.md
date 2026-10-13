@@ -1,0 +1,18 @@
+| Metric | Unit | Mean | Median | p95 | Max |
+|---|---|---|---|---|---|
+| Latency (round trip) | ms | 1604.3 | 1068.5 | 3300.4 | 27640.8 |
+| Inference (YOLO) | ms | 467.0 | 440.4 | 466.9 | 2386.1 |
+| Rest of request | ms | 1137.3 | 622.7 | 2855.8 | 27198.4 |
+| Capture (webcam, not VM) | ms | 1737.1 | 1038.8 | 4847.1 | 8581.4 |
+| CPU busy (VM) | % | 4.2 | 0.0 | 23.0 | 26.5 |
+| CPU steal | % | 0.0 | 0.0 | 0.0 | 0.0 |
+| CPU server process | % | 4.1 | 0.0 | 23.0 | 25.0 |
+| RAM available | MiB | 249.7 | 250.0 | 266.0 | 271.0 |
+| RAM server process | MiB | 361.1 | 351.0 | 378.0 | 398.0 |
+| Swap used | MiB | 309.0 | 338.0 | 338.0 | 344.0 |
+| Frame size | KiB | 261.8 | 261.7 | 268.9 | 276.6 |
+| VM network in | KiB/s | 50.0 | 0.2 | 274.6 | 282.5 |
+| VM network out | KiB/s | 2.1 | 0.4 | 6.5 | 18.0 |
+| Upload bandwidth (frames) | KiB/s | 45.8 |  |  |  |
+| Frames OK / sent | frames | 104/108 |  |  |  |
+| Cost per frame | EUR | 0.0000267 |  |  |  |
