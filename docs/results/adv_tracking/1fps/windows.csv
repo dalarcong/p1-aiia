@@ -1,0 +1,6 @@
+window_start,camera_id,frames,people_unique,vehicles_unique,people_reassociated,vehicles_reassociated,people_detections,vehicles_detections,people_max_frame
+2026-10-15T18:54:58,grazalema_1fps,60,17,4,3,0,537,172,15
+2026-10-15T18:55:58,grazalema_1fps,60,10,2,7,0,471,183,11
+2026-10-15T18:56:58,grazalema_1fps,60,5,1,6,1,432,173,11
+2026-10-15T18:57:58,grazalema_1fps,60,3,1,5,0,364,179,8
+2026-10-15T18:58:58,grazalema_1fps,60,5,0,4,0,388,176,8

@@ -447,3 +447,31 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
   | Inferencia                      | 440 ms     | 434 ms    |
 
 - **Conclusión:** El frame ocupa 2,8 veces menos y la latencia baja ~200 ms, todo en la parte de red: son ~173 KB menos de subida por frame. La inferencia y la CPU de la VM no cambian, así que el límite de cámaras de la 4.2 sigue igual. El coste no varía.
+
+## 15/10/2026 - Avanzado 1 y 2 Conteo de personas y vehículos únicos con tracking
+
+- **Problema:** Con 1 frame cada 5 s no se puede seguir a nadie. Hay que leer el stream de forma continua a varios frames por segundo.
+
+- **Implementación:** `advanced/track_count.py` lee el stream (o un clip grabado) sin cerrarlo y procesa N frames/s con `model.track()` (YOLOv8s + ByteTrack), detectando personas, coches, motos, autobuses y camiones. Cada ID se cuenta una vez, cuando aparece en al menos 3 frames, y los resultados se agregan en ventanas de 60 segundos (fila en el CSV y gráfica). Se ejecuta en local (a 5 fps no cabe en la VM).
+
+- **Criterio:** Se cuentan **apariciones** por cámara. Cada vez que alguien entra en escena cuenta una vez, aunque permanezca muchos frames. Una persona que sale del encuadre y vuelve a entrar cuenta como una aparición nueva.
+
+- **Prueba:** Clip de 5 min de Grazalema (15 fps, 1080p) procesado a 5, 1 y 0,2 fps (la última simula el sistema actual), comparado con un conteo manual por minuto (`docs/results/adv_tracking/manual_count.csv`).
+
+- **Ajustes:** La primera pasada a 5 fps contaba 148 personas y 40 vehículos frente a unos 73 y 19 reales. El tracker seguía bien a quien se movía, pero lo quieto (gente sentada en un banco, vehículos aparcados, algún objeto mal clasificado como persona) perdía el ID al parpadear o quedar tapado y recibía uno nuevo. Para arreglarlo se hicieron dos cambios:
+  1. Aumento de la confianza mínima en `advanced/bytetrack.yaml`.
+  2. Un ID nuevo que aparece a menos de una altura de caja de donde se perdió otro del mismo tipo hace poco no se cuenta.
+
+- **Resultados finales** (totales de 5 min; MAE = error medio por minuto):
+
+  | Configuración              | Personas       | MAE     | Vehículos      | MAE     |
+  | -------------------------- | -------------- | ------- | -------------- | ------- |
+  | Conteo manual              | 73             | —       | 19             | —       |
+  | **5 fps**                  | **65 (−11 %)** | **2,8** | **25 (+32 %)** | **1,6** |
+  | 1 fps                      | 40 (−45 %)     | 7,4     | 8 (−58 %)      | 2,6     |
+  | 0,2 fps (1 frame cada 5 s) | 32 (−56 %)     | 8,6     | 6 (−68 %)      | 2,6     |
+
+- **Conclusiones:**
+  - A 1 frame cada 5 s se pierde más de la mitad de las apariciones.
+  - A 5 fps, con los dos ajustes, el error queda en -11% en personas, sobre todo por gente pequeña o en sombra que YOLO no detecta. En vehículos queda en +32%, probablemente por coches que se parten en 2 IDs al salir por el borde del encuadre.
+  - A 1 fps la reasociación empeora el resultado, ya que una persona se mueve demasiado rápido entre frames y acaba uniendo a personas distintas. El ajuste está pensado para 5 fps, la configuración recomendada.

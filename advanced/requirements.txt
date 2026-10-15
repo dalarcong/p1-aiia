@@ -1,1 +1,2 @@
 -r ../local/requirements.txt
+lap>=0.5.12
