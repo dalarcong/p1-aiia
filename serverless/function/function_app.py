@@ -8,6 +8,7 @@ import azure.functions as func
 import cv2
 import numpy as np
 
+from pathlib import Path
 from azure.ai.vision.imageanalysis import ImageAnalysisClient
 from azure.ai.vision.imageanalysis.models import VisualFeatures
 from azure.core.credentials import AzureKeyCredential
@@ -38,6 +39,14 @@ def get_vision_client() -> ImageAnalysisClient:
 
     return _vision_client
 
+def get_camera_id(blob_name: str) -> str:
+    filename = Path(blob_name).name
+    parts = filename.split("__")
+
+    if len(parts) >= 2:
+        return parts[1]
+
+    return "unknown"
 
 def get_exclude_zone():
     """Parse the optional exclusion polygon from an environment variable."""
@@ -151,7 +160,12 @@ def procesar_archivo(
 
     image_height, image_width = frame.shape[:2]
 
-    exclude_zone = get_exclude_zone()
+    camera_id = get_camera_id(archivo.name)
+    exclude_zone = (
+        get_exclude_zone()
+        if camera_id == "grazalema"
+        else None
+    )
 
     person_count = 0
     detected_count = 0
@@ -259,6 +273,7 @@ def procesar_archivo(
     ) * 1000
 
     result_data = {
+        "camera_id": camera_id,
         "filename": archivo.name,
         "architecture": "serverless",
         "processed_at": datetime.now(
