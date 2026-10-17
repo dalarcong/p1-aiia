@@ -282,6 +282,8 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Despliegue:** Tras cada cambio, `git pull` y `cp vm/web/index.html vm/web/script.js /var/www/html`.
 
+
+
 ## 11/10/2026 - 2.4 Falta de memoria en la VM
 
 - **Síntoma:** Con la web activa, la inferencia pasó a más de 10 s por frame.
@@ -295,6 +297,8 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Después del swap:** 160 MB de RAM disponibles (antes 15), 236 MB de caché (antes 53), 184 MB en el swap y sin lecturas continuas de disco.
 
 - **Conclusión:** En esta VM el recurso limitante es la RAM, no la CPU.
+
+
 
 ## 12/10/2026 - 2.5 Métricas de la VM (en curso)
 
@@ -354,6 +358,27 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 
 - **Pruebas:** En local con el servidor de prueba (3 cámaras, escalonado y periodo correctos) y contra la VM con 2 cámaras durante 60 s: 25/25 frames correctos, inferencia mediana de 444 ms y latencia mediana de 1438 ms.
 
+## 12/10/2026 - 3.2 Subida de imágenes al contenedor propio
+Subida de imágenes al contenedor compleatada. Ejecutar con:
+```
+python -m serverless.upload_loop
+```
+Se añadieron 4 nuevos valores en el ``.env``
+
+```
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+AZURE_RAW_CONTAINER=
+AZURE_RAW_PREFIX=
+
+CAPTURE_INTERVAL_SERVERLESS=
+```
+
+Se configuró un periodo objetivo de subida de 0,5 s, siguiendo el ejemplo del enunciado. Sin embargo, la frecuencia efectiva resultó inferior debido a que el proceso de captura abre y decodifica el stream H.264 en cada iteración. En las pruebas realizadas, la captura y subida requirieron aproximadamente entre 1,5 y 4 s por frame. Al superar este tiempo el intervalo configurado, el cliente inicia inmediatamente el siguiente ciclo sin espera adicional. Finalmente se ha dejado fijado el intervalo de subida en 2.5s.
+
+En Windows durante la captura se observaron avisos de FFmpeg relativos a SPS/PPS del flujo H.264. Al tratarse de avisos asociados al stream de la webcam y continuar obteniéndose imágenes válidas, no se introdujo tratamiento adicional.
+
+Asimismo, se ha detectado una posible optimización a evaluar más adelante de ``source.capture()`` manteniendo el stream abierto.
+
 ## 12/10/2026 - 4.2 Barrido con captura en directo
 
 - **Prueba:** `multicam/sweep.py` con cámaras reales capturadas en directo desde el portátil: escalones de 2, 4, 6 y 8 cámaras de 60 s (19:00–19:05 CEST) y una prueba previa con 16 cámaras (~45 s). Datos en `docs/results/4_2_live_capture/`.
@@ -404,3 +429,4 @@ inferencia en la CPU de la VM, mientras que la diferencia entre
 - **Coste por frame:** baja de ~23 × 10⁻⁶ € (1 cámara) a ~2,3 × 10⁻⁶ € (10 cámaras), porque la VM cuesta lo mismo por hora. Por encima del límite vuelve a subir, porque se procesan menos frames.
 
 - **Pendiente (Laura):** Azure Monitor de 19:42 a 20:32 (CEST): _Percentage CPU_, _CPU Credits Remaining/Consumed_, _Available Memory Bytes_, _Network In Total_.
+
