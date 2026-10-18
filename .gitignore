@@ -233,3 +233,7 @@ results/local_people_timeline.png
 /replay_frames
 
 *.mp4
+
+CLAUDE.md
+*.pdf
+docs/ejemplo/
