@@ -430,3 +430,73 @@ Asimismo, se ha detectado una posible optimización a evaluar más adelante de `
 
 - **Pendiente (Laura):** Azure Monitor de 19:42 a 20:32 (CEST): _Percentage CPU_, _CPU Credits Remaining/Consumed_, _Available Memory Bytes_, _Network In Total_.
 
+## 13/10/2026 - Avanzado 3 Resolución mínima y compresión
+
+- **Prueba:** `advanced/eval_compression.py` recodifica los 30 frames de referencia (1080p) a varios anchos (1920–480 px, `cv2.INTER_AREA`) y calidades JPEG (100–30), cuenta personas con la configuración de producción (`yolov8s` 960/0.25) y compara con la verdad manual. Las cajas se reescalan a 1080p antes de aplicar la zona de exclusión. Todo en local: con `imgsz` fijo, el tamaño enviado no cambia la inferencia, solo el ancho de banda y el detalle que llega al modelo. Datos en `docs/results/adv_compression/` (`summary.csv`, `compression.png`).
+
+- **Resultados** (selección; con 30 frames, diferencias de MAE de ±0,3 son ruido):
+
+  | Ancho / calidad    | KiB por frame | MAE  | Sesgo |
+  | ------------------ | ------------- | ---- | ----- |
+  | 1920 / 90 (actual) | 481           | 1,70 | +0,30 |
+  | 960 / 100          | 403           | 1,60 | +0,27 |
+  | **960 / 90**       | **159**       | 1,80 | −0,40 |
+  | 960 / 75           | 93            | 2,10 | −1,30 |
+  | 960 / 45           | 58            | 3,30 | −2,77 |
+  | 720 / 100          | 243           | 2,00 | −0,20 |
+  | 640 / 90           | 77            | 2,40 | −1,60 |
+  | 1920 / 30          | 151           | 1,67 | −0,40 |
+
+- **Resolución mínima: 960 px, igual que `imgsz`.** Sin compresión (q100), 960 px da la misma eficacia que 1920, porque YOLO reduce la imagen a 960 de todas formas. Por debajo, el sesgo se vuelve negativo incluso con q100: se pierden personas pequeñas.
+
+- **La compresión depende de la resolución:** a 1920 px la calidad apenas importa (MAE 1,4–1,8 hasta q30), porque al reducir la imagen YOLO promedia los artefactos del JPEG. A 960 px los ve directamente y la eficacia cae rápido por debajo de q90.
+
+- **Decisión: 960 px / q90.** Reduce el frame **~3 veces** (481 → 159 KiB) sin pérdida medible de eficacia. 1920/q30 ocupa lo mismo con la misma eficacia. Se elige 960 porque la VM descodifica y anota una imagen 4 veces más pequeña.
+
+- **Tiempo de inferencia:** prácticamente igual en todas las combinaciones (~100–120 ms en local. Varía ±10 ms sin relación con el tamaño). El ahorro está en la red, no en el cómputo.
+
+## 13/10/2026 - Avanzado 3 Compresión en el cliente: prueba con la VM
+
+- **Implementación:** `capture_frame` y `FrameSource` aceptan `max_width` (opcional): el frame se reduce antes de codificarlo, así que se comprime una sola vez. `vm_client` lo lee de `CLIENT_MAX_WIDTH` y `CLIENT_JPEG_QUALITY` (vacío = tamaño original).
+
+- **Prueba:** Grazalema, dos tandas seguidas de 10 min, 1920/q90 y 960/q90, con `vm.monitor` en la VM. Datos en `docs/results/adv_compression_vm/`, análisis con `vm/analyze_run.py`.
+
+- **Resultados** (medianas):
+
+  | Métrica                         | 1920 / q90 | 960 / q90 |
+  | ------------------------------- | ---------- | --------- |
+  | Tamaño del frame                | 262 KiB    | 92 KiB    |
+  | Red de entrada en la VM (media) | 50 KiB/s   | 20 KiB/s  |
+  | Latencia (ida y vuelta)         | 1069 ms    | 852 ms    |
+  | Latencia sin inferencia         | 623 ms     | 418 ms    |
+  | Inferencia                      | 440 ms     | 434 ms    |
+
+- **Conclusión:** El frame ocupa 2,8 veces menos y la latencia baja ~200 ms, todo en la parte de red: son ~173 KB menos de subida por frame. La inferencia y la CPU de la VM no cambian, así que el límite de cámaras de la 4.2 sigue igual. El coste no varía.
+
+## 15/10/2026 - Avanzado 1 y 2 Conteo de personas y vehículos únicos con tracking
+
+- **Problema:** Con 1 frame cada 5 s no se puede seguir a nadie. Hay que leer el stream de forma continua a varios frames por segundo.
+
+- **Implementación:** `advanced/track_count.py` lee el stream (o un clip grabado) sin cerrarlo y procesa N frames/s con `model.track()` (YOLOv8s + ByteTrack), detectando personas, coches, motos, autobuses y camiones. Cada ID se cuenta una vez, cuando aparece en al menos 3 frames, y los resultados se agregan en ventanas de 60 segundos (fila en el CSV y gráfica). Se ejecuta en local (a 5 fps no cabe en la VM).
+
+- **Criterio:** Se cuentan **apariciones** por cámara. Cada vez que alguien entra en escena cuenta una vez, aunque permanezca muchos frames. Una persona que sale del encuadre y vuelve a entrar cuenta como una aparición nueva.
+
+- **Prueba:** Clip de 5 min de Grazalema (15 fps, 1080p) procesado a 5, 1 y 0,2 fps (la última simula el sistema actual), comparado con un conteo manual por minuto (`docs/results/adv_tracking/manual_count.csv`).
+
+- **Ajustes:** La primera pasada a 5 fps contaba 148 personas y 40 vehículos frente a unos 73 y 19 reales. El tracker seguía bien a quien se movía, pero lo quieto (gente sentada en un banco, vehículos aparcados, algún objeto mal clasificado como persona) perdía el ID al parpadear o quedar tapado y recibía uno nuevo. Para arreglarlo se hicieron dos cambios:
+  1. Aumento de la confianza mínima en `advanced/bytetrack.yaml`.
+  2. Un ID nuevo que aparece a menos de una altura de caja de donde se perdió otro del mismo tipo hace poco no se cuenta.
+
+- **Resultados finales** (totales de 5 min; MAE = error medio por minuto):
+
+  | Configuración              | Personas       | MAE     | Vehículos      | MAE     |
+  | -------------------------- | -------------- | ------- | -------------- | ------- |
+  | Conteo manual              | 73             | —       | 19             | —       |
+  | **5 fps**                  | **65 (−11 %)** | **2,8** | **25 (+32 %)** | **1,6** |
+  | 1 fps                      | 40 (−45 %)     | 7,4     | 8 (−58 %)      | 2,6     |
+  | 0,2 fps (1 frame cada 5 s) | 32 (−56 %)     | 8,6     | 6 (−68 %)      | 2,6     |
+
+- **Conclusiones:**
+  - A 1 frame cada 5 s se pierde más de la mitad de las apariciones.
+  - A 5 fps, con los dos ajustes, el error queda en -11% en personas, sobre todo por gente pequeña o en sombra que YOLO no detecta. En vehículos queda en +32%, probablemente por coches que se parten en 2 IDs al salir por el borde del encuadre.
+  - A 1 fps la reasociación empeora el resultado, ya que una persona se mueve demasiado rápido entre frames y acaba uniendo a personas distintas. El ajuste está pensado para 5 fps, la configuración recomendada.

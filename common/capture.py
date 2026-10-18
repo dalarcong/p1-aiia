@@ -10,9 +10,11 @@ import os
 import re
 import urllib.request
 from urllib.parse import urlparse
+
 # Silence harmless H.264 warnings
 os.environ.setdefault("OPENCV_FFMPEG_LOGLEVEL", "8")
 import cv2
+from common.image import resize_to_width
 
 
 OPEN_TIMEOUT_MS = 10000
@@ -33,7 +35,7 @@ class CaptureError(Exception):
     """Raised when a frame cannot be captured from the stream."""
 
 
-def capture_frame(url: str, quality: int = 90) -> bytes:
+def capture_frame(url: str, quality: int = 90, max_width: int | None = None) -> bytes:
     """Capture a single frame from a video stream and return it as JPEG.
 
     The stream is opened, read once and released on every call, so
@@ -42,6 +44,8 @@ def capture_frame(url: str, quality: int = 90) -> bytes:
     Args:
         url: Direct stream URL (.m3u8, MJPEG...), not the web page URL.
         quality: JPEG quality from 0 to 100.
+        max_width: If set, wider frames are shrunk to this width (keeping
+            the aspect ratio) before encoding.
 
     Returns:
         The frame encoded as JPEG bytes.
@@ -62,6 +66,10 @@ def capture_frame(url: str, quality: int = 90) -> bytes:
         ret, frame = cap.read()
         if not ret:
             raise CaptureError("Could not read the frame")
+
+        # Shrunk before encoding
+        if max_width is not None:
+            frame = resize_to_width(frame, max_width)
 
         ok, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, quality])
 
@@ -123,12 +131,14 @@ class FrameSource:
     Attributes:
         camera_url: Camera page URL or direct stream URL.
         quality: JPEG quality from 0 to 100.
+        max_width: Maximum frame width sent (None keeps the original size).
         url_resolutions: How many times the stream URL has been resolved.
     """
 
-    def __init__(self, camera_url: str, quality: int = 90) -> None:
+    def __init__(self, camera_url: str, quality: int = 90, max_width: int | None = None) -> None:
         self.camera_url = camera_url
         self.quality = quality
+        self.max_width = max_width
         self.url_resolutions = 0
         self._stream_url: str | None = None
 
@@ -149,10 +159,10 @@ class FrameSource:
         try:
             stream_url = self._stream_url or self._resolve()
             try:
-                return capture_frame(stream_url, self.quality)
+                return capture_frame(stream_url, self.quality, self.max_width)
             except CaptureError:
                 # The stream token may have expired: renew it and retry once
-                return capture_frame(self._resolve(), self.quality)
+                return capture_frame(self._resolve(), self.quality, self.max_width)
         except CaptureError:
             self._stream_url = None
             raise

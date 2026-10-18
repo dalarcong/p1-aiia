@@ -41,3 +41,15 @@ def encode_jpeg(frame: np.ndarray, quality: int = 90) -> bytes:
         raise ImageEncodeError("Could not encode JPEG image")
 
     return buffer.tobytes()
+
+
+def resize_to_width(frame: np.ndarray, width: int) -> np.ndarray:
+    """
+    Shrink a frame to the given width, keeping its aspect ratio.
+    """
+    height, original_width = frame.shape[:2]
+    if width >= original_width:
+        return frame
+
+    new_height = round(height * width / original_width)
+    return cv2.resize(frame, (width, new_height), interpolation=cv2.INTER_AREA)

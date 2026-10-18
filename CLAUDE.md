@@ -59,9 +59,10 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 
 ## Interfaces comunes (no cambiar sin acordarlo)
 
-- `capture_frame(url) -> bytes (JPEG)` en `common/capture.py`.
+- `capture_frame(url, quality=90, max_width=None) -> bytes (JPEG)` en `common/capture.py`. `max_width` reduce el
+  frame antes de codificarlo (avanzado: 960 px / q90 vía `CLIENT_MAX_WIDTH` y `CLIENT_JPEG_QUALITY` en `vm_client`).
 - `count_people(img) -> (n, boxes)` en `common/count_people.py`.
-- `FrameSource(camera_url).capture() -> bytes` en `common/capture.py`: captura con renovación del token
+- `FrameSource(camera_url, quality=90, max_width=None).capture() -> bytes` en `common/capture.py`: captura con renovación del token
   de SkylineWebcams. Usarla en todos los bucles de captura.
 - Contrato cliente ↔ VM: `POST http://<IP_VM>/frame`, cuerpo JPEG, cabeceras `Content-Type: image/jpeg`,
   `X-Camera-Id`, `X-Captured-At` (ISO 8601), `Authorization: Bearer <VM_TOKEN>`. Respuesta JSON
@@ -75,7 +76,7 @@ La documentación de Azure del profesorado está en `docs/azure/`:
 ## Estructura del repo
 
 ```
-common/  local/  vm/  serverless/  multicam/  results/  docs/ (bitacora.md, screenshots/, Practice1.pdf, ejemplo/, azure/)
+common/  local/  vm/  serverless/  multicam/  advanced/  results/  docs/ (bitacora.md, screenshots/, Practice1.pdf, ejemplo/, azure/)
 .env.example  .gitignore  README.md
 ```
 
