@@ -66,6 +66,7 @@ GREEN = "#1baf7a"
 RED = "#d9594c"
 MUTED = "#898781"
 GRID = "#e1e0d9"
+USD_TO_EUR = 0.8924
 
 
 FIELDS = [
@@ -98,9 +99,9 @@ FIELDS = [
     "detection_bias",
     "detection_exact_pct",
     "detection_within1_pct",
-    "cost_total_usd",
-    "cost_per_frame_usd",
-    "cost_per_hour_usd",
+    "cost_total_eur",
+    "cost_per_frame_eur",
+    "cost_per_hour_eur",
 ]
 
 
@@ -492,9 +493,9 @@ def _estimate_cost(
 
     if not ok:
         return {
-            "cost_total_usd": "",
-            "cost_per_frame_usd": "",
-            "cost_per_hour_usd": "",
+            "cost_total_eur": "",
+            "cost_per_frame_eur": "",
+            "cost_per_hour_eur": "",
         }
 
     n_ok = len(ok)
@@ -589,16 +590,16 @@ def _estimate_cost(
     )
 
     return {
-        "cost_total_usd": round(
-            total,
+        "cost_total_eur": round(
+            total * USD_TO_EUR,
             6,
         ),
-        "cost_per_frame_usd": round(
-            per_frame,
+        "cost_per_frame_eur": round(
+            per_frame * USD_TO_EUR,
             7,
         ),
-        "cost_per_hour_usd": round(
-            per_hour,
+        "cost_per_hour_eur": round(
+            per_hour * USD_TO_EUR,
             4,
         ),
     }
@@ -1184,7 +1185,7 @@ def _plot_cost_per_frame(
     ax.plot(
         cameras,
         [
-            row["cost_per_frame_usd"]
+            row["cost_per_frame_eur"]
             for row in rows
         ],
         color=GREEN,
@@ -1196,7 +1197,7 @@ def _plot_cost_per_frame(
         ax,
         "Normalised serverless cost per frame",
         "Cameras",
-        "USD / processed frame",
+        "EUR / processed frame",
     )
 
     ax.set_xticks(cameras)
@@ -1228,7 +1229,7 @@ def _plot_cost_per_hour(
     ax.plot(
         cameras,
         [
-            row["cost_per_hour_usd"]
+            row["cost_per_hour_eur"]
             for row in rows
         ],
         color=GREEN,
@@ -1240,7 +1241,7 @@ def _plot_cost_per_hour(
         ax,
         "Normalised serverless cost at sustained load",
         "Cameras",
-        "USD / hour",
+        "EUR / hour",
     )
 
     ax.set_xticks(cameras)
@@ -1486,7 +1487,7 @@ def _write_summary_markdown(
             f"{row['latency_p95_ms']:.0f} ms | "
             f"{row['vision_median_ms']:.0f} ms | "
             f"{row['processing_median_ms']:.0f} ms | "
-            f"${row['cost_per_frame_usd']:.7f} |"
+            f"€{row['cost_per_frame_eur']:.7f} |"
         )
 
     lines.extend(
@@ -1535,7 +1536,7 @@ def _print_table(
             f"{row['latency_p95_ms']:<5.0f} ms   "
             f"{row['vision_median_ms']:>5.0f}   "
             f"{row['processing_median_ms']:>5.0f}   "
-            f"${row['cost_per_frame_usd']:.7f}"
+            f"€{row['cost_per_frame_eur']:.7f}"
         )
 
 
